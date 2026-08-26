@@ -21,6 +21,7 @@ tauri-build = { version = "2", features = [] }
 tauri = { version = "2", features = [] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+libc = "0.2"
 
 # Los plugins del escritorio. Los cuatro, no dos: una app de VasakOS tiene que
 # hablar el idioma de la sesión y abrir el menú del sistema con el clic derecho.

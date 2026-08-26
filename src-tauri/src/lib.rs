@@ -4,6 +4,7 @@
 //! aplicaciones reales del escritorio se rompió al menos una vez.
 
 mod locales;
+pub mod muestreo;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
