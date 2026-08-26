@@ -491,7 +491,10 @@ pub fn registros_de_vasakos(
     cantidad: u32,
     app: Option<String>,
 ) -> Vec<registros::Entrada> {
-    let cantidad = cantidad.clamp(20, 2000).to_string();
+    let pedidas = cantidad.clamp(20, 2000);
+    // Se lee de más cuando hay que filtrar: los errores que el programa marca en
+    // el texto son informativos para el diario, así que `-p err` los perdería.
+    let a_leer = registros::a_leer(pedidas, solo_problemas).to_string();
     let pedido = app.unwrap_or_default();
 
     // Un id inválido se trata como «todo el ecosistema» en lugar de pasarse: un
@@ -506,11 +509,9 @@ pub fn registros_de_vasakos(
 
     let mut entradas = Vec::new();
     for ambito in ["--user", "--system"] {
-        let mut argumentos = vec![ambito, "-o", "json", "-n", &cantidad, "--no-pager", "-b"];
-        if solo_problemas {
-            argumentos.push("-p");
-            argumentos.push("err");
-        }
+        // Sin `-p err`: el filtro por severidad se hace más abajo, con el nivel ya
+        // corregido por lo que el propio programa escribió.
+        let mut argumentos = vec![ambito, "-o", "json", "-n", &a_leer, "--no-pager", "-b"];
         // Las coincidencias van al final: `journalctl` las quiere después de las
         // opciones.
         argumentos.extend(coincidencias.iter().map(|c| c.as_str()));
@@ -523,6 +524,11 @@ pub fn registros_de_vasakos(
     // De lo más nuevo a lo más viejo: el problema que se busca acaba de pasar.
     entradas.sort_by_key(|e| std::cmp::Reverse(e.microsegundos));
     entradas.dedup_by(|a, b| a.microsegundos == b.microsegundos && a.mensaje == b.mensaje);
+
+    if solo_problemas {
+        entradas.retain(registros::Entrada::es_problema);
+    }
+    entradas.truncate(pedidas as usize);
     entradas
 }
 
