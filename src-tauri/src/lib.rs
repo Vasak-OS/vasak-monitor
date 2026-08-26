@@ -5,6 +5,7 @@
 
 mod locales;
 pub mod muestreo;
+pub mod comandos;
 pub mod limpieza;
 pub mod registros;
 pub mod servicios;
@@ -27,6 +28,17 @@ pub fn run() {
         .plugin(tauri_plugin_config_manager::init())
         .plugin(tauri_plugin_vicons::init())
         .plugin(tauri_plugin_shell::init())
+        .invoke_handler(tauri::generate_handler![
+            comandos::recursos,
+            comandos::aplicaciones,
+            comandos::cerrar,
+            comandos::lista_de_servicios,
+            comandos::accion_de_servicio,
+            comandos::recuperable,
+            comandos::limpiar,
+            comandos::registros_de_vasakos,
+            comandos::desplazamiento_horario,
+        ])
         .run(tauri::generate_context!())
         .expect("error al ejecutar la aplicación");
 }

@@ -19,3 +19,80 @@ inicio:
   descripcion: Esta es la plantilla. Reemplazá esta pantalla por la tuya.
   # `t()` no interpola: el marcador se reemplaza a mano. Ver el README.
   saludo: "Hola, {0}"
+pantallas:
+  recursos: Recursos
+  aplicaciones: Aplicaciones
+  servicios: Servicios
+  limpieza: Limpieza
+  registros: Registros
+common:
+  cargando: Cargando…
+  midiendo: Midiendo…
+  actualizar: Actualizar
+ajustes:
+  intervalo: Cada cuánto medir
+  pausaExplicada: "Con la ventana tapada no se mide: este monitor no debería ser lo que más consume."
+recursos:
+  cpu: Procesador
+  memoria: Memoria
+  swap: Swap
+  red: Red
+  discos: Discos
+  nucleos: "{0} núcleos"
+  deTotal: "{0} de {1}"
+  cacheExplicada: "{0} son caché de disco: el sistema la devuelve sola cuando alguien la necesita, así que no es consumo."
+  swapExplicado: Páginas que quedaron en disco. Con memoria libre se pueden devolver desde Limpieza.
+  redExplicada: Sin contar el tráfico local, que no sale de la máquina.
+aplicaciones:
+  buscar: Buscar una aplicación
+  cuantas: "{0} aplicaciones"
+  cerrar: Cerrar
+  agrupadas: "Los procesos de una misma aplicación se muestran juntos: un navegador son diez y ninguno es «el consumo» por separado."
+  cerrarExplicado: Cerrar le pide al programa que se cierre y le da tiempo a guardar. No lo mata.
+servicios:
+  soloVasakOS: Sólo los de VasakOS
+  fallidos: "{0} con fallo"
+  delSistema: del sistema
+  start: Arrancar
+  stop: Detener
+  restart: Reiniciar
+limpieza:
+  midiendo: Midiendo cuánto se puede recuperar…
+  totalEtiqueta: Espacio recuperable
+  enDisco: En disco
+  enMemoria: En memoria
+  limpiar: Limpiar
+  limpiarConClave: Limpiar…
+  hecho: Listo
+  advertenciaMemoria: >-
+    Casi todo lo que promete «liberar memoria» en Linux no libera nada: lo que
+    parece ocupado es caché de disco, y el sistema la devuelve sola cuando alguien
+    la pide. Vaciarla obliga a volver a leer del disco lo que estaba en memoria, así
+    que después va más lento, no más rápido. Estas dos hacen algo medible, y dicen
+    qué.
+  tareas:
+    cache-de-usuario:
+      titulo: Caché de las aplicaciones
+      detalle: Datos que cada programa vuelve a generar cuando los necesita.
+    papelera:
+      titulo: Papelera
+      detalle: Lo que se borró y todavía se puede recuperar.
+    cache-de-paquetes:
+      titulo: Paquetes descargados
+      detalle: Se conserva la última versión de cada uno, para poder volver atrás.
+    paquetes-huerfanos:
+      titulo: Paquetes huérfanos
+      detalle: Quedaron instalados sin que nada los necesite.
+    diario-viejo:
+      titulo: Diario del sistema
+      detalle: Se conservan los últimos siete días.
+    swap-a-la-memoria:
+      titulo: Devolver el swap a la memoria
+      detalle: Las páginas que quedaron en disco vuelven a la RAM. Sirve cuando hay memoria libre y el swap está ocupado.
+    cache-del-kernel:
+      titulo: Vaciar la caché de disco
+      detalle: Deja el sistema «frío». Útil para medir algo desde cero, no como mejora.
+registros:
+  soloProblemas: Sólo errores
+  buscar: Buscar en los mensajes
+  cuantas: "{0} entradas"

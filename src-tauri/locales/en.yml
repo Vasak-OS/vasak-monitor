@@ -9,3 +9,80 @@ inicio:
   titulo: Hello, VasakOS
   descripcion: This is the template. Replace this screen with your own.
   saludo: "Hello, {0}"
+pantallas:
+  recursos: Resources
+  aplicaciones: Applications
+  servicios: Services
+  limpieza: Cleanup
+  registros: Logs
+common:
+  cargando: Loading…
+  midiendo: Measuring…
+  actualizar: Refresh
+ajustes:
+  intervalo: Measure every
+  pausaExplicada: "Nothing is measured while the window is covered: this monitor should not be what consumes the most."
+recursos:
+  cpu: Processor
+  memoria: Memory
+  swap: Swap
+  red: Network
+  discos: Disks
+  nucleos: "{0} cores"
+  deTotal: "{0} of {1}"
+  cacheExplicada: "{0} is disk cache: the system gives it back on its own when something needs it, so it is not consumption."
+  swapExplicado: Pages left on disk. With free memory they can be brought back from Cleanup.
+  redExplicada: Local traffic is not counted, since it never leaves the machine.
+aplicaciones:
+  buscar: Search for an application
+  cuantas: "{0} applications"
+  cerrar: Close
+  agrupadas: "Processes of the same application are shown together: a browser is ten of them and none is «the consumption» on its own."
+  cerrarExplicado: Closing asks the program to quit and gives it time to save. It does not kill it.
+servicios:
+  soloVasakOS: VasakOS only
+  fallidos: "{0} failed"
+  delSistema: system
+  start: Start
+  stop: Stop
+  restart: Restart
+limpieza:
+  midiendo: Measuring what can be reclaimed…
+  totalEtiqueta: Reclaimable space
+  enDisco: On disk
+  enMemoria: In memory
+  limpiar: Clean
+  limpiarConClave: Clean…
+  hecho: Done
+  advertenciaMemoria: >-
+    Almost everything that promises to «free memory» on Linux frees nothing: what
+    looks occupied is disk cache, and the system gives it back on its own when
+    something asks. Emptying it forces re-reading from disk what was already in
+    memory, so things get slower afterwards, not faster. These two do something
+    measurable, and say what.
+  tareas:
+    cache-de-usuario:
+      titulo: Application cache
+      detalle: Data each program regenerates when it needs it.
+    papelera:
+      titulo: Trash
+      detalle: What was deleted and can still be recovered.
+    cache-de-paquetes:
+      titulo: Downloaded packages
+      detalle: The latest version of each is kept, so you can roll back.
+    paquetes-huerfanos:
+      titulo: Orphan packages
+      detalle: Left installed with nothing needing them.
+    diario-viejo:
+      titulo: System journal
+      detalle: The last seven days are kept.
+    swap-a-la-memoria:
+      titulo: Bring swap back to memory
+      detalle: Pages left on disk return to RAM. Useful when memory is free and swap is occupied.
+    cache-del-kernel:
+      titulo: Empty the disk cache
+      detalle: Leaves the system «cold». Useful to measure something from scratch, not as an improvement.
+registros:
+  soloProblemas: Errors only
+  buscar: Search the messages
+  cuantas: "{0} entries"
