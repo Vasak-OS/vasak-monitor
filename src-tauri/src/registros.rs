@@ -322,6 +322,48 @@ pub fn origen_desde(
         .to_string()
 }
 
+/// Los marcadores de severidad que algunos programas escriben ellos mismos al
+/// principio del mensaje.
+///
+/// Wayfire manda todo por stderr con una marca propia, así que sus líneas `EE`
+/// llegan al diario como prioridad 6 —informativas—: en este arranque hay 406, y
+/// «sólo errores» las escondía **todas**. El compositor es justamente el programa
+/// cuyos errores más importan cuando el escritorio se porta raro.
+const MARCADORES_DE_SEVERIDAD: [(&str, u8); 3] = [("EE", 3), ("WW", 4), ("II", 6)];
+
+/// Cuánto se agranda la ventana de lectura cuando se filtra por severidad.
+///
+/// El filtro no se le puede delegar a `journalctl -p err`: los errores marcados en
+/// el texto son informativos para el diario y sólo se reconocen leyéndolos. Se lee
+/// de más y se descarta acá.
+pub const VENTANA_AL_FILTRAR: u32 = 6;
+/// El techo de líneas que se leen de una vez, filtrando o no.
+pub const MAXIMO_LEIDO: u32 = 5000;
+
+/// La severidad real de una entrada.
+///
+/// Sólo **sube**: lo que el diario ya marcó como error no se ablanda porque el
+/// texto empiece con `II`.
+pub fn nivel_efectivo(nivel: u8, mensaje: &str) -> u8 {
+    for (marca, propio) in MARCADORES_DE_SEVERIDAD {
+        if let Some(resto) = mensaje.strip_prefix(marca) {
+            if resto.starts_with([' ', ':', '\t']) {
+                return nivel.min(propio);
+            }
+        }
+    }
+    nivel
+}
+
+/// Cuántas líneas pedirle al diario para poder entregar `cantidad`.
+pub fn a_leer(cantidad: u32, solo_problemas: bool) -> u32 {
+    if solo_problemas {
+        cantidad.saturating_mul(VENTANA_AL_FILTRAR).min(MAXIMO_LEIDO)
+    } else {
+        cantidad
+    }
+}
+
 /// Lee la salida de `journalctl -o json`, una entrada por línea.
 ///
 /// Las líneas que no parsean se saltan en lugar de abortar: el diario puede tener
@@ -366,7 +408,8 @@ pub fn entrada_de(linea: &str) -> Option<Entrada> {
     Some(Entrada {
         microsegundos,
         origen,
-        nivel,
+        // La severidad que el propio programa escribió gana sobre la del diario.
+        nivel: nivel_efectivo(nivel, &mensaje),
         mensaje,
     })
 }
@@ -714,5 +757,52 @@ mod tests {
         assert!(id_valido("vasak-algo@sesion"));
         // Lo que `journalctl` podría tomar por una opción sigue afuera.
         assert!(!id_valido("-vasak-algo"));
+    }
+
+    #[test]
+    fn un_error_del_compositor_cuenta_como_error() {
+        // Wayfire manda todo por stderr, así que sus líneas `EE` llegan como
+        // prioridad 6 y «sólo errores» las escondía todas: 406 en este arranque,
+        // justo las del programa cuyos errores más importan.
+        let linea = r#"{"PRIORITY":"6","SYSLOG_IDENTIFIER":"uwsm_wayfire","MESSAGE":"EE [animate.cpp:373] Unknown animation type"}"#;
+        let e = entrada_de(linea).unwrap();
+        assert_eq!(e.nivel, 3);
+        assert!(e.es_problema());
+    }
+
+    #[test]
+    fn un_aviso_del_compositor_es_un_aviso_y_no_un_error() {
+        let linea = r#"{"PRIORITY":"6","MESSAGE":"WW algo raro"}"#;
+        let e = entrada_de(linea).unwrap();
+        assert_eq!(e.nivel, 4);
+        assert!(!e.es_problema());
+    }
+
+    #[test]
+    fn el_marcador_nunca_ablanda_lo_que_el_diario_llamo_error() {
+        // Si el diario dice 3 y el texto dice `II`, sigue siendo un error.
+        assert_eq!(nivel_efectivo(3, "II algo"), 3);
+        assert_eq!(nivel_efectivo(6, "II algo"), 6);
+    }
+
+    #[test]
+    fn el_marcador_tiene_que_estar_al_principio_y_separado() {
+        // Sin esto, cualquier mensaje que empiece con esas letras se convertiría en
+        // un error: «EEPROM no responde» no es una marca de severidad.
+        assert_eq!(nivel_efectivo(6, "EEPROM no responde"), 6);
+        assert_eq!(nivel_efectivo(6, "algo EE ahí"), 6);
+        assert_eq!(nivel_efectivo(6, "EE con espacio"), 3);
+        assert_eq!(nivel_efectivo(6, "EE: con dos puntos"), 3);
+    }
+
+    #[test]
+    fn filtrando_se_lee_de_mas_para_poder_entregar_lo_pedido() {
+        // El filtro no se le puede delegar a `journalctl -p err`, así que si se
+        // leyera justo lo pedido, quedarían cuatro errores entre quinientas líneas.
+        assert_eq!(a_leer(500, false), 500);
+        assert_eq!(a_leer(500, true), 3000);
+        // Y con un techo, para no leer el diario entero.
+        assert_eq!(a_leer(2000, true), MAXIMO_LEIDO);
+        assert!(a_leer(u32::MAX, true) <= MAXIMO_LEIDO);
     }
 }
