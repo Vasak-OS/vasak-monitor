@@ -4,7 +4,7 @@
 //! números, no listas de miles de líneas para procesar en JavaScript. En un monitor
 //! eso importa el doble, porque es la aplicación que muestra el consumo.
 
-use crate::muestreo::{cpu, discos, memoria, procesos, red};
+use crate::muestreo::{cpu, discos, memoria, procesos, red, ventanas};
 use crate::{limpieza, registros, servicios};
 use std::sync::{Mutex, OnceLock};
 use std::time::Instant;
@@ -140,6 +140,11 @@ pub struct Aplicacion {
     pub memoria: u64,
     /// `None` en la primera muestra, por lo mismo que la CPU total.
     pub cpu: Option<f32>,
+    /// Si tiene una conexión gráfica abierta con el compositor.
+    ///
+    /// Es lo que separa lo que la persona abrió de lo que corre por su cuenta. Ver
+    /// `muestreo::ventanas` para qué mide exactamente y qué no.
+    pub con_ventana: bool,
 }
 
 #[tauri::command]
@@ -173,6 +178,21 @@ pub fn aplicaciones() -> Vec<Aplicacion> {
         lista.push(p);
     }
 
+    // Quién habla con el compositor. Se pregunta una vez por muestra y no por
+    // proceso: son 200 procesos y una sola pasada de `ss`.
+    let con_ventana = ventanas::detectar();
+
+    // La marca se propaga al grupo: si **cualquiera** de los procesos de una
+    // aplicación tiene ventana, la aplicación la tiene. Un navegador abre la
+    // ventana en un proceso y decodifica en otros, y mirando sólo el pid que queda
+    // como representante del grupo la mitad de las aplicaciones se clasificarían
+    // mal según qué proceso arrancó primero.
+    let grupos_con_ventana: std::collections::HashSet<String> = lista
+        .iter()
+        .filter(|p| con_ventana.contains(&p.pid))
+        .map(|p| p.nombre.clone())
+        .collect();
+
     let agrupados = procesos::agrupar(lista);
 
     // El uso de CPU de cada aplicación, como diferencia con la muestra anterior.
@@ -191,6 +211,7 @@ pub fn aplicaciones() -> Vec<Aplicacion> {
                 nombre: p.nombre.clone(),
                 memoria: p.paginas * pagina,
                 cpu,
+                con_ventana: grupos_con_ventana.contains(&p.nombre),
             }
         })
         .collect();
@@ -341,6 +362,25 @@ pub fn recuperable() -> Vec<Recuperable> {
     lista
 }
 
+/// Ejecuta varias tareas seguidas.
+///
+/// Devuelve qué falló en lugar de cortar en la primera: si la caché de paquetes no
+/// se puede tocar, la papelera y el diario igual se limpian. Cortar dejaría el
+/// trabajo a medias sin decir cuánto se hizo.
+///
+/// Las que piden autenticar se agrupan al final para que polkit pregunte una sola
+/// vez seguida en lugar de intercalar diálogos entre tareas silenciosas.
+#[tauri::command]
+pub fn limpiar_todo(tareas: Vec<limpieza::Tarea>) -> Vec<String> {
+    let mut ordenadas = tareas;
+    ordenadas.sort_by_key(|t| t.necesita_autenticar());
+
+    ordenadas
+        .into_iter()
+        .filter_map(|t| limpiar(t).err().map(|e| format!("{t:?}: {e}")))
+        .collect()
+}
+
 #[tauri::command]
 pub fn limpiar(tarea: limpieza::Tarea) -> Result<(), String> {
     let home = std::env::var("HOME").unwrap_or_default();
@@ -407,17 +447,74 @@ pub fn limpiar(tarea: limpieza::Tarea) -> Result<(), String> {
 
 // ── Registros ──────────────────────────────────────────────
 
-#[tauri::command]
-pub fn registros_de_vasakos(solo_problemas: bool, cantidad: u32) -> Vec<registros::Entrada> {
-    let cantidad = cantidad.clamp(20, 2000).to_string();
-    let mut entradas = Vec::new();
+/// Los orígenes del ecosistema que alguna vez escribieron en el diario.
+///
+/// Se pregunta con `journalctl -F <campo>`, que enumera los valores de un campo
+/// usando el índice del diario. Leer las entradas y juntar los orígenes también
+/// serviría, pero sólo vería las últimas N líneas: una app que escribió al
+/// arrancar y se quedó callada no aparecería en el selector.
+///
+/// No se acota al arranque actual porque `-F` no admite `-b`; ver
+/// `registros::argumentos_de_campo`.
+fn origenes_presentes() -> Vec<String> {
+    let mut texto = String::new();
+    for (ambito, unidad) in [("--user", "_SYSTEMD_USER_UNIT"), ("--system", "_SYSTEMD_UNIT")] {
+        for campo in ["SYSLOG_IDENTIFIER", "_COMM", unidad] {
+            if let Ok(s) = std::process::Command::new("journalctl")
+                .args(registros::argumentos_de_campo(ambito, campo))
+                .output()
+            {
+                texto.push_str(&String::from_utf8_lossy(&s.stdout));
+                texto.push('\n');
+            }
+        }
+    }
+    registros::origenes_de(&texto)
+}
 
+/// El catálogo del selector de apps de la pantalla de registros.
+#[tauri::command]
+pub fn apps_del_diario() -> Vec<registros::AppDelDiario> {
+    registros::catalogo(&origenes_presentes())
+}
+
+/// Las entradas del diario, filtradas por app.
+///
+/// `app` vacío es el ecosistema entero, `"*"` es el diario completo —VasakOS y lo
+/// demás— y cualquier otro valor es una sola app. El filtro va a `journalctl` y no
+/// se hace acá con los resultados: con `-n 500` sin filtrar, las líneas de una app
+/// tranquila las tapan las del resto y la pantalla queda vacía aunque el diario
+/// las tenga.
+#[tauri::command]
+pub fn registros_de_vasakos(
+    solo_problemas: bool,
+    cantidad: u32,
+    app: Option<String>,
+) -> Vec<registros::Entrada> {
+    let cantidad = cantidad.clamp(20, 2000).to_string();
+    let pedido = app.unwrap_or_default();
+
+    // Un id inválido se trata como «todo el ecosistema» en lugar de pasarse: un
+    // valor que empiece con `-` sería una opción para `journalctl`.
+    let coincidencias = if pedido == registros::TODO_EL_SISTEMA {
+        Vec::new()
+    } else if pedido != registros::TODO_EL_ECOSISTEMA && registros::id_valido(&pedido) {
+        registros::coincidencias_de(&registros::nombres_de(&pedido))
+    } else {
+        registros::coincidencias_de(&origenes_presentes())
+    };
+
+    let mut entradas = Vec::new();
     for ambito in ["--user", "--system"] {
         let mut argumentos = vec![ambito, "-o", "json", "-n", &cantidad, "--no-pager", "-b"];
         if solo_problemas {
             argumentos.push("-p");
             argumentos.push("err");
         }
+        // Las coincidencias van al final: `journalctl` las quiere después de las
+        // opciones.
+        argumentos.extend(coincidencias.iter().map(|c| c.as_str()));
+
         if let Ok(s) = std::process::Command::new("journalctl").args(&argumentos).output() {
             entradas.extend(registros::entradas_de(&String::from_utf8_lossy(&s.stdout)));
         }
@@ -425,6 +522,7 @@ pub fn registros_de_vasakos(solo_problemas: bool, cantidad: u32) -> Vec<registro
 
     // De lo más nuevo a lo más viejo: el problema que se busca acaba de pasar.
     entradas.sort_by_key(|e| std::cmp::Reverse(e.microsegundos));
+    entradas.dedup_by(|a, b| a.microsegundos == b.microsegundos && a.mensaje == b.mensaje);
     entradas
 }
 

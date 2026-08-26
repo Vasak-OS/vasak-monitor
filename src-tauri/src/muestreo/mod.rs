@@ -10,3 +10,4 @@ pub mod discos;
 pub mod memoria;
 pub mod procesos;
 pub mod red;
+pub mod ventanas;

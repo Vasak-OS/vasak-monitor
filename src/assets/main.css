@@ -181,3 +181,11 @@ body * {
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.3);
 }
+
+/* Las casillas y los radios nativos se dibujan con el color del sistema, que en
+   una ventana oscura queda como un cuadradito blanco pegado al texto.
+   `accent-color` es lo único que el motor deja cambiar sin rehacer el control. */
+input[type="checkbox"],
+input[type="radio"] {
+  accent-color: var(--color-primary);
+}

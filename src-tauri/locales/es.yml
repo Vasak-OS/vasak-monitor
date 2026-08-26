@@ -10,6 +10,7 @@ _version: 1
 #     marcadores `{0}`. Hay un test que lo verifica.
 app:
   nombre: Aplicación Vasak
+  titulo: Monitor del sistema
 ventana:
   minimizar: Minimizar
   maximizar: Maximizar
@@ -48,6 +49,14 @@ aplicaciones:
   cuantas: "{0} aplicaciones"
   cerrar: Cerrar
   agrupadas: "Los procesos de una misma aplicación se muestran juntos: un navegador son diez y ninguno es «el consumo» por separado."
+  conVentana: Con ventana
+  ningunaConVentana: Ninguna aplicación con ventana coincide con la búsqueda.
+  verFondo: "Ver {0} en segundo plano"
+  ocultarFondo: "Ocultar {0} en segundo plano"
+  fondoExplicado: >-
+    Servicios y ayudantes que no abriste vos. Lo que se mide es si tienen una
+    conexión gráfica abierta con el compositor, que no es exactamente lo mismo que
+    tener una ventana visible: algún agente se conecta sin mostrar nada.
   cerrarExplicado: Cerrar le pide al programa que se cierre y le da tiempo a guardar. No lo mata.
 servicios:
   soloVasakOS: Sólo los de VasakOS
@@ -63,6 +72,7 @@ limpieza:
   enMemoria: En memoria
   limpiar: Limpiar
   limpiarConClave: Limpiar…
+  limpiarTodo: Limpiar todo
   hecho: Listo
   advertenciaMemoria: >-
     Casi todo lo que promete «liberar memoria» en Linux no libera nada: lo que
@@ -96,3 +106,12 @@ registros:
   soloProblemas: Sólo errores
   buscar: Buscar en los mensajes
   cuantas: "{0} entradas"
+  deQuien: Aplicación
+  todoElEcosistema: Todo el ecosistema
+  todoElSistema: Todo el sistema
+  sinEntradas: sin entradas
+  nadaQueMostrar: Esta aplicación no escribió nada en el diario desde que arrancó el sistema.
+  dondeEscriben: >-
+    Los servicios escriben con su propio nombre. Una aplicación que se abre desde el
+    menú, en cambio, escribe en el diario de la sesión del escritorio, así que sus
+    mensajes aparecen ahí y no acá.

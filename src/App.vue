@@ -4,6 +4,8 @@ import { listen } from '@tauri-apps/api/event';
 import { useConfigStore } from '@vasakgroup/plugin-config-manager';
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
 import { onMounted, onUnmounted, ref } from 'vue';
+import Icono from '@/components/Icono.vue';
+import Selector from '@/components/Selector.vue';
 import WindowAppLayout from '@/layouts/WindowAppLayout.vue';
 import { esEnVivo, INTERVALO_POR_OMISION, INTERVALOS, intervaloValido } from '@/tools/sondeo';
 import AplicacionesView from '@/views/AplicacionesView.vue';
@@ -19,6 +21,15 @@ const PANTALLAS = ['recursos', 'aplicaciones', 'servicios', 'limpieza', 'registr
 type Pantalla = (typeof PANTALLAS)[number];
 
 const pantalla = ref<Pantalla>('recursos');
+
+/** El icono de cada pantalla. Todas las áreas del escritorio llevan uno. */
+const ICONOS: Record<Pantalla, string> = {
+	recursos: 'utilities-system-monitor',
+	aplicaciones: 'applications-other',
+	servicios: 'system-run',
+	limpieza: 'user-trash',
+	registros: 'text-x-generic',
+};
 const intervalo = ref(INTERVALO_POR_OMISION);
 
 let soltarConfig: UnlistenFn | null = null;
@@ -43,39 +54,46 @@ onUnmounted(() => soltarConfig?.());
 
 <template>
 	<WindowAppLayout>
-		<div class="flex h-full min-h-0">
-			<nav class="flex w-52 shrink-0 flex-col gap-1 border-ui-border border-r p-3">
+		<div class="flex h-full min-h-0 w-full">
+			<nav
+				class="flex w-14 shrink-0 flex-col gap-1 overflow-hidden border-ui-border border-r p-2 transition-all sm:w-52 sm:p-3"
+			>
 				<button
 					v-for="p in PANTALLAS"
 					:key="p"
 					type="button"
-					class="flex items-center gap-2 rounded-corner px-3 py-2 text-left text-sm transition-colors"
+					class="flex items-center justify-center gap-2 rounded-corner px-2 py-2 text-left text-sm transition-colors sm:justify-start sm:px-3"
 					:class="
 						pantalla === p
 							? 'bg-primary/15 font-medium text-primary'
-							: 'text-tx-primary hover:bg-ui-surface'
+							: 'text-tx-main hover:bg-ui-surface'
 					"
 					@click="pantalla = p"
 				>
-					{{ t(`pantallas.${p}`) }}
+					<Icono :nombre="ICONOS[p]" :tamano="18" />
+					<span class="hidden truncate sm:inline">{{ t(`pantallas.${p}`) }}</span>
 				</button>
 
-				<div class="mt-auto flex flex-col gap-1 pt-3">
+				<div class="mt-auto hidden flex-col gap-1 pt-3 sm:flex">
 					<label class="text-tx-muted text-xs">{{ t('ajustes.intervalo') }}</label>
-					<select
-						v-model.number="intervalo"
-						class="rounded-corner border border-ui-border bg-ui-surface/40 px-2 py-1 text-sm text-tx-primary"
-					>
+					<Selector v-model.number="intervalo">
 						<option v-for="i in INTERVALOS" :key="i" :value="i">{{ i / 1000 }} s</option>
-					</select>
+					</Selector>
 					<!-- Se dice que la medición se pausa: sin eso, alguien que abre el
 					     monitor y lo deja de fondo supone que sigue gastando. -->
 					<p class="text-tx-muted text-[11px]">{{ t('ajustes.pausaExplicada') }}</p>
 				</div>
 			</nav>
 
-			<main class="min-h-0 flex-1 overflow-y-auto p-4">
-				<h1 class="mb-4 font-medium text-tx-primary text-xl">{{ t(`pantallas.${pantalla}`) }}</h1>
+			<!-- `@container`: lo que decide si algo cabe es el ancho de **esta** área, no
+			     el de la ventana. Con cortes por viewport, la barra lateral de 208 px
+			     no se descuenta y una ventana de 800 px pone dos columnas en 570 px de
+			     espacio real. -->
+			<main class="@container min-h-0 flex-1 overflow-y-auto p-3 sm:p-4">
+				<h1 class="mb-4 flex items-center gap-2 font-medium text-tx-main text-xl">
+					<Icono :nombre="ICONOS[pantalla]" :tamano="22" />
+					{{ t(`pantallas.${pantalla}`) }}
+				</h1>
 				<RecursosView
 					v-if="pantalla === 'recursos'"
 					:intervalo="intervalo"

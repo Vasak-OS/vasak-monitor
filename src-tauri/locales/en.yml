@@ -1,6 +1,7 @@
 _version: 1
 app:
   nombre: Vasak Application
+  titulo: System Monitor
 ventana:
   minimizar: Minimise
   maximizar: Maximise
@@ -38,6 +39,14 @@ aplicaciones:
   cuantas: "{0} applications"
   cerrar: Close
   agrupadas: "Processes of the same application are shown together: a browser is ten of them and none is «the consumption» on its own."
+  conVentana: With a window
+  ningunaConVentana: No application with a window matches the search.
+  verFondo: "Show {0} in the background"
+  ocultarFondo: "Hide {0} in the background"
+  fondoExplicado: >-
+    Services and helpers you did not open. What is measured is whether they hold a
+    graphical connection to the compositor, which is not exactly the same as having
+    a visible window: some agents connect without showing anything.
   cerrarExplicado: Closing asks the program to quit and gives it time to save. It does not kill it.
 servicios:
   soloVasakOS: VasakOS only
@@ -53,6 +62,7 @@ limpieza:
   enMemoria: In memory
   limpiar: Clean
   limpiarConClave: Clean…
+  limpiarTodo: Clean all
   hecho: Done
   advertenciaMemoria: >-
     Almost everything that promises to «free memory» on Linux frees nothing: what
@@ -86,3 +96,12 @@ registros:
   soloProblemas: Errors only
   buscar: Search the messages
   cuantas: "{0} entries"
+  deQuien: Application
+  todoElEcosistema: The whole ecosystem
+  todoElSistema: The whole system
+  sinEntradas: no entries
+  nadaQueMostrar: This application has written nothing to the journal since the system booted.
+  dondeEscriben: >-
+    Services write under their own name. An application opened from the menu writes
+    to the desktop session's journal instead, so its messages show up there and not
+    here.
