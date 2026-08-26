@@ -36,6 +36,8 @@ pub fn run() {
             comandos::accion_de_servicio,
             comandos::recuperable,
             comandos::limpiar,
+            comandos::limpiar_todo,
+            comandos::apps_del_diario,
             comandos::registros_de_vasakos,
             comandos::desplazamiento_horario,
         ])
