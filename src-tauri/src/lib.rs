@@ -5,6 +5,9 @@
 
 mod locales;
 pub mod muestreo;
+pub mod limpieza;
+pub mod registros;
+pub mod servicios;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {

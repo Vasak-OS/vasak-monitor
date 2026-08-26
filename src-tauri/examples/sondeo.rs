@@ -2,6 +2,7 @@
 //! herramientas del sistema. Si un parser está mal, acá se ve.
 use std::{thread, time::{Duration, Instant}};
 use vasak_monitor_lib::muestreo::{cpu, discos, memoria, procesos, red};
+use vasak_monitor_lib::{limpieza, registros, servicios};
 
 fn main() {
     let a = cpu::contadores_de(&std::fs::read_to_string("/proc/stat").unwrap()).unwrap();
@@ -51,4 +52,39 @@ fn main() {
         let (v, u) = discos::formato_de_tamano(p.paginas * pagina);
         println!("           {:<24} {v:>6.1} {u}", p.nombre);
     }
+
+    // ── Servicios, contra systemctl de verdad ────────────────────────────
+    let salida = std::process::Command::new("systemctl")
+        .args(["--user", "list-units", "--type=service", "--plain", "--no-legend", "--all"])
+        .output().unwrap();
+    let s = servicios::ordenar(servicios::servicios_de(&String::from_utf8_lossy(&salida.stdout), true));
+    println!("  Servicios: {} ({} de VasakOS, {} fallidos)", s.len(),
+        s.iter().filter(|x| x.de_vasakos).count(),
+        s.iter().filter(|x| x.estado == "failed").count());
+    for x in s.iter().take(4) { println!("           {:<34} {} / {}", x.unidad, x.estado, x.detalle); }
+
+    // ── Registros, contra el diario de verdad ───────────────────────────
+    let salida = std::process::Command::new("journalctl")
+        .args(["--user", "-o", "json", "-n", "300", "--no-pager"])
+        .output().unwrap();
+    let e = registros::entradas_de(&String::from_utf8_lossy(&salida.stdout));
+    println!("  Registros: {} entradas, {} problemas", e.len(), e.iter().filter(|x| x.es_problema()).count());
+    for x in e.iter().filter(|x| x.es_problema()).take(3) {
+        println!("           [{}] {}: {}", x.nivel, x.origen, x.mensaje.chars().take(60).collect::<String>());
+    }
+
+    // ── Limpieza, midiendo de verdad ────────────────────────────────────
+    let home = std::env::var("HOME").unwrap();
+    for t in [limpieza::Tarea::CacheDeUsuario, limpieza::Tarea::Papelera] {
+        if let Some(ruta) = limpieza::ruta_de(t, &home) {
+            let salida = std::process::Command::new("du").args(["-sb"]).arg(&ruta).output().unwrap();
+            let bytes = limpieza::bytes_de_du(&String::from_utf8_lossy(&salida.stdout)).unwrap_or(0);
+            let (v, u) = discos::formato_de_tamano(bytes);
+            println!("  Limpieza:  {:<26} {v:>7.1} {u}", ruta.display().to_string());
+        }
+    }
+    let salida = std::process::Command::new("journalctl").arg("--disk-usage").output().unwrap();
+    let bytes = limpieza::bytes_del_diario(&String::from_utf8_lossy(&salida.stdout)).unwrap_or(0);
+    let (v, u) = discos::formato_de_tamano(bytes);
+    println!("             {:<26} {v:>7.1} {u}", "diario del sistema");
 }
