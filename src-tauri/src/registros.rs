@@ -106,10 +106,40 @@ pub fn es_del_ecosistema(nombre: &str) -> bool {
     crate::servicios::es_de_vasakos(nombre)
 }
 
-/// Le saca el `.service` a una unidad, para que `vasak-keyring.service` y
+/// Los sufijos con los que systemd nombra sus unidades.
+pub const SUFIJOS_DE_UNIDAD: [&str; 8] = [
+    ".service",
+    ".socket",
+    ".timer",
+    ".target",
+    ".path",
+    ".slice",
+    ".mount",
+    ".scope",
+];
+
+/// Los sufijos que se prueban al consultar por unidad.
+///
+/// Sólo dos: son los que estos demonios usan de verdad, y cada uno agrega una
+/// coincidencia más por app a una consulta que ya lleva varias.
+pub const SUFIJOS_CONSULTADOS: [&str; 2] = [".service", ".socket"];
+
+/// Cuántas coincidencias genera un nombre.
+pub const COINCIDENCIAS_POR_NOMBRE: usize = 2 + SUFIJOS_CONSULTADOS.len() * 2;
+
+/// Le saca el sufijo de unidad a un nombre, para que `vasak-keyring.service` y
 /// `vasak-keyring` sean la misma app en el selector y no dos.
+///
+/// Se sacan todos y no sólo `.service`: un demonio activado por socket aparece como
+/// `vasak-keyring.socket`, y dejándolo entero quedaba una entrada más del selector
+/// que además consultaba por `vasak-keyring.socket.service` y no encontraba nada.
 pub fn normalizar(valor: &str) -> &str {
-    valor.strip_suffix(".service").unwrap_or(valor)
+    for sufijo in SUFIJOS_DE_UNIDAD {
+        if let Some(base) = valor.strip_suffix(sufijo) {
+            return base;
+        }
+    }
+    valor
 }
 
 /// Si un identificador se puede pasar a `journalctl`.
@@ -122,7 +152,11 @@ pub fn id_valido(id: &str) -> bool {
         && id.len() <= 64
         && id
             .bytes()
-            .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'-' || b == b'_' || b == b'.')
+            // `@` porque una unidad con plantilla lo lleva en el nombre. Ni `-` al
+            // principio ni nada que `journalctl` pueda tomar por una opción.
+            .all(|b| {
+                b.is_ascii_lowercase() || b.is_ascii_digit() || matches!(b, b'-' | b'_' | b'.' | b'@')
+            })
         && es_del_ecosistema(id)
 }
 
@@ -142,10 +176,13 @@ pub fn nombres_de(id: &str) -> Vec<String> {
 /// los completa: `vasak-lock-scre` no es otra app, es `vasak-lock-screen` visto
 /// por `_COMM`.
 pub fn origenes_de(texto: &str) -> Vec<String> {
+    // Se filtra con `id_valido` y no sólo por el prefijo: un nombre que después no
+    // se puede pasar a `journalctl` aparecía en el selector y al elegirlo no
+    // filtraba nada, cayendo en silencio a «todo el ecosistema».
     let mut nombres: Vec<String> = texto
         .lines()
         .map(|l| normalizar(l.trim()))
-        .filter(|l| es_del_ecosistema(l))
+        .filter(|l| id_valido(l))
         .map(|l| l.to_string())
         .collect();
     nombres.sort();
@@ -160,12 +197,18 @@ pub fn origenes_de(texto: &str) -> Vec<String> {
     }
     nombres.retain(|n| !ECOSISTEMA.iter().any(|(_, _, alias)| alias.contains(&n.as_str())));
 
+    // Sólo lo que llegó **justo** al límite puede venir cortado. Con `<` en lugar
+    // de `!=`, un nombre más largo que el límite también entraba a la comparación y
+    // desaparecía por existir otro que lo extendiera: `vasak-file-manager` se
+    // perdía si el diario tuviera un `vasak-file-manager-algo`. Y las dos medidas
+    // van en caracteres, no una en caracteres y otra en bytes.
     let completos = nombres.clone();
     nombres.retain(|n| {
-        n.chars().count() < LIMITE_COMM
+        let largo = n.chars().count();
+        largo != LIMITE_COMM
             || !completos
                 .iter()
-                .any(|otro| otro.len() > n.len() && otro.starts_with(n.as_str()))
+                .any(|otro| otro.chars().count() > largo && otro.starts_with(n.as_str()))
     });
     nombres.sort();
     nombres.dedup();
@@ -203,7 +246,7 @@ pub fn catalogo(presentes: &[String]) -> Vec<AppDelDiario> {
     // Lo descubierto que la lista fija no conoce: un paquete nuevo aparece sin
     // que haya que tocar el código.
     for nombre in presentes {
-        if !apps.iter().any(|a| &a.id == nombre) {
+        if id_valido(nombre) && !apps.iter().any(|a| &a.id == nombre) {
             apps.push(AppDelDiario {
                 id: nombre.clone(),
                 icono: "application-x-executable".to_string(),
@@ -225,13 +268,18 @@ pub fn catalogo(presentes: &[String]) -> Vec<AppDelDiario> {
 pub fn coincidencias_de(nombres: &[String]) -> Vec<String> {
     let mut argumentos: Vec<String> = Vec::new();
     for nombre in nombres {
+        // `_COMM` con el nombre cortado: el kernel guarda quince caracteres.
         let cortado: String = nombre.chars().take(LIMITE_COMM).collect();
-        for campo in CAMPOS_DE_ORIGEN {
-            let valor = match campo {
-                "_COMM" => cortado.clone(),
-                "_SYSTEMD_USER_UNIT" | "_SYSTEMD_UNIT" => format!("{nombre}.service"),
-                _ => nombre.clone(),
-            };
+        let mut pares: Vec<(&str, String)> = vec![
+            ("SYSLOG_IDENTIFIER", nombre.clone()),
+            ("_COMM", cortado),
+        ];
+        for sufijo in SUFIJOS_CONSULTADOS {
+            for campo in ["_SYSTEMD_USER_UNIT", "_SYSTEMD_UNIT"] {
+                pares.push((campo, format!("{nombre}{sufijo}")));
+            }
+        }
+        for (campo, valor) in pares {
             if !argumentos.is_empty() {
                 argumentos.push("+".to_string());
             }
@@ -534,7 +582,7 @@ mod tests {
         // el `+` entre grupos, pedir identificador y unidad y proceso a la vez no
         // devuelve una sola línea.
         let c = coincidencias_de(&["vasak-keyring".to_string()]);
-        assert_eq!(c.len(), CAMPOS_DE_ORIGEN.len() * 2 - 1);
+        assert_eq!(c.len(), COINCIDENCIAS_POR_NOMBRE * 2 - 1);
         assert_eq!(c[0], "SYSLOG_IDENTIFIER=vasak-keyring");
         assert_eq!(c[1], "+");
         assert!(c.contains(&"_SYSTEMD_USER_UNIT=vasak-keyring.service".to_string()));
@@ -614,5 +662,57 @@ mod tests {
         assert!(es_unidad_transitoria("session-2.scope"));
         assert!(es_unidad_transitoria("init.scope"));
         assert!(!es_unidad_transitoria("vasak-keyring.service"));
+    }
+
+    #[test]
+    fn un_nombre_mas_largo_que_el_limite_no_lo_borra_otro_que_lo_extienda() {
+        // `vasak-file-manager` tiene dieciocho caracteres: no puede venir de un
+        // `_COMM` cortado, así que ninguna coincidencia de prefijo lo explica. Con
+        // el corte en `<` en lugar de `!=` desaparecía del selector.
+        let campos = "vasak-file-manager\nvasak-file-manager-algo\n";
+        let o = origenes_de(campos);
+        assert!(o.contains(&"vasak-file-manager".to_string()), "{o:?}");
+        assert!(o.contains(&"vasak-file-manager-algo".to_string()), "{o:?}");
+    }
+
+    #[test]
+    fn los_sufijos_de_unidad_se_sacan_todos() {
+        // Un demonio activado por socket aparece como `vasak-keyring.socket`.
+        // Dejándolo entero quedaba otra entrada del selector, que además
+        // consultaba por `vasak-keyring.socket.service` y no encontraba nada.
+        assert_eq!(normalizar("vasak-keyring.socket"), "vasak-keyring");
+        assert_eq!(normalizar("vasak-keyring.service"), "vasak-keyring");
+        assert_eq!(normalizar("vasak-algo.timer"), "vasak-algo");
+        assert_eq!(normalizar("vasak-keyring"), "vasak-keyring");
+        assert_eq!(origenes_de("vasak-keyring.socket\nvasak-keyring.service\n").len(), 1);
+    }
+
+    #[test]
+    fn la_consulta_prueba_el_socket_y_no_solo_el_service() {
+        let c = coincidencias_de(&["vasak-keyring".to_string()]);
+        assert!(c.contains(&"_SYSTEMD_USER_UNIT=vasak-keyring.socket".to_string()), "{c:?}");
+        assert!(c.contains(&"_SYSTEMD_USER_UNIT=vasak-keyring.service".to_string()), "{c:?}");
+        // El vector lleva los `+` intercalados, así que son los pares menos uno.
+        assert_eq!(c.len(), COINCIDENCIAS_POR_NOMBRE * 2 - 1);
+    }
+
+    #[test]
+    fn lo_que_no_se_puede_consultar_no_llega_al_selector() {
+        // Un nombre que `id_valido` rechaza aparecía en el selector y al elegirlo
+        // no filtraba nada: caía en silencio a «todo el ecosistema», y quien lo
+        // eligió veía el diario entero creyendo que era el de esa app.
+        let campos = "vasak-Cosa\nvasak-con espacio\nvasak-bien\nvasak-raro\\x2dcosa\n";
+        assert_eq!(origenes_de(campos), vec!["vasak-bien".to_string()]);
+
+        // Y el catálogo tampoco lo suma si le llega igual.
+        assert!(!catalogo(&["vasak-Cosa".to_string()]).iter().any(|a| a.id == "vasak-Cosa"));
+    }
+
+    #[test]
+    fn una_unidad_con_plantilla_es_un_id_valido() {
+        // systemd las nombra con `@`, y son unidades legítimas del ecosistema.
+        assert!(id_valido("vasak-algo@sesion"));
+        // Lo que `journalctl` podría tomar por una opción sigue afuera.
+        assert!(!id_valido("-vasak-algo"));
     }
 }

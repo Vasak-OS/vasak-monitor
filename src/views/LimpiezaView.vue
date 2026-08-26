@@ -4,6 +4,7 @@ import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
 import { computed, onMounted, ref } from 'vue';
 import Icono from '@/components/Icono.vue';
 import { tamano } from '@/tools/formato';
+import { errorTrasLimpiarGrupo, hayLimpiezaEnCurso } from '@/tools/limpieza';
 
 type Tarea =
 	| 'cache-de-usuario'
@@ -54,6 +55,10 @@ async function cargar() {
 /** El total recuperable en disco, que es el número que la gente busca. */
 const totalEnDisco = computed(() => lista.value.reduce((suma, r) => suma + (r.bytes ?? 0), 0));
 
+/** Cualquier limpieza en curso bloquea a todas las demás: dos comandos sobre el
+ *  mismo recurso a la vez no se llevan bien. */
+const ocupado = computed(() => hayLimpiezaEnCurso(limpiandoTodo.value, ocupada.value));
+
 const deDisco = computed(() => lista.value.filter((r) => r.bytes !== null));
 const deMemoria = computed(() => lista.value.filter((r) => r.bytes === null));
 
@@ -66,18 +71,20 @@ const deMemoria = computed(() => lista.value.filter((r) => r.bytes === null));
  * tocar, la papelera y el diario igual se limpian.
  */
 async function limpiarGrupo(tareas: Tarea[]) {
-	if (tareas.length === 0 || limpiandoTodo.value) return;
+	if (tareas.length === 0 || ocupado.value) return;
 	limpiandoTodo.value = true;
 	error.value = '';
 	aviso.value = '';
 	try {
 		const fallos = await invoke<string[]>('limpiar_todo', { tareas });
-		if (fallos.length > 0) {
-			error.value = fallos.join(' · ');
-		} else {
+		// Se recarga **antes** de anotar los fallos: `cargar` limpia `error` cuando
+		// le va bien, así que anotándolos primero se borraban solos y la pantalla
+		// decía «Listo» aunque la mitad no se hubiera hecho.
+		await cargar();
+		error.value = errorTrasLimpiarGrupo(error.value, fallos);
+		if (!error.value) {
 			aviso.value = t('limpieza.hecho');
 		}
-		await cargar();
 	} catch (e) {
 		error.value = String(e);
 	} finally {
@@ -86,13 +93,19 @@ async function limpiarGrupo(tareas: Tarea[]) {
 }
 
 async function limpiar(r: Recuperable) {
+	// Nada arranca mientras haya otra limpieza: dos comandos sobre el mismo
+	// recurso a la vez no se llevan bien, y el botón deshabilitado no alcanza
+	// —un doble clic entra antes de que Vue lo pinte.
+	if (ocupado.value) return;
 	ocupada.value = r.tarea;
 	error.value = '';
 	aviso.value = '';
 	try {
 		await invoke('limpiar', { tarea: r.tarea });
-		aviso.value = t('limpieza.hecho');
 		await cargar();
+		if (!error.value) {
+			aviso.value = t('limpieza.hecho');
+		}
 	} catch (e) {
 		error.value = String(e);
 	} finally {
@@ -129,7 +142,7 @@ onMounted(cargar);
 					</h2>
 					<button
 						type="button"
-						:disabled="limpiandoTodo || deDisco.length === 0"
+						:disabled="ocupado || deDisco.length === 0"
 						class="ml-auto flex items-center gap-1.5 rounded-corner border border-primary/30 bg-primary/10 px-3 py-1.5 font-medium text-primary text-sm hover:bg-primary/15 disabled:opacity-50"
 						@click="limpiarGrupo(deDisco.map((r) => r.tarea))"
 					>
@@ -151,7 +164,7 @@ onMounted(cargar);
 						<span class="shrink-0 font-mono text-sm text-tx-main">{{ tamano(r.bytes ?? 0) }}</span>
 						<button
 							type="button"
-							:disabled="ocupada === r.tarea"
+							:disabled="ocupado"
 							class="shrink-0 rounded-corner border border-ui-border px-3 py-1 text-sm text-tx-main hover:bg-ui-surface disabled:opacity-50"
 							@click="limpiar(r)"
 						>
@@ -169,7 +182,7 @@ onMounted(cargar);
 					</h2>
 					<button
 						type="button"
-						:disabled="limpiandoTodo || deMemoria.length === 0"
+						:disabled="ocupado || deMemoria.length === 0"
 						class="ml-auto flex items-center gap-1.5 rounded-corner border border-ui-border px-3 py-1.5 text-sm text-tx-main hover:bg-ui-surface disabled:opacity-50"
 						@click="limpiarGrupo(deMemoria.map((r) => r.tarea))"
 					>
@@ -196,7 +209,7 @@ onMounted(cargar);
 						</div>
 						<button
 							type="button"
-							:disabled="ocupada === r.tarea"
+							:disabled="ocupado"
 							class="shrink-0 rounded-corner border border-ui-border px-3 py-1 text-sm text-tx-main hover:bg-ui-surface disabled:opacity-50"
 							@click="limpiar(r)"
 						>
