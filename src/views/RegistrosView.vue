@@ -2,8 +2,8 @@
 import { invoke } from '@tauri-apps/api/core';
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
 import { computed, onMounted, ref } from 'vue';
-import Icono from '@/components/Icono.vue';
-import Selector from '@/components/Selector.vue';
+import SelectField from '@/components/SelectField.vue';
+import ThemeIcon from '@/components/ThemeIcon.vue';
 import { interpolar } from '@/tools/interpolar';
 import {
 	type AppDelDiario,
@@ -102,15 +102,15 @@ onMounted(() => {
 		     de los controles filtran dentro de eso. -->
 		<header class="flex flex-wrap items-center gap-2 sm:gap-3">
 			<label class="flex min-w-0 items-center gap-2 text-sm text-tx-main">
-				<Icono :nombre="iconoElegido" :tamano="18" :alt="t('registros.deQuien')" />
+				<ThemeIcon :nombre="iconoElegido" :tamano="18" :alt="t('registros.deQuien')" />
 				<span class="sr-only">{{ t('registros.deQuien') }}</span>
-				<Selector v-model="app" class="max-w-56" @change="cargar()">
+				<SelectField v-model="app" class="max-w-56" @change="cargar()">
 					<option :value="ECOSISTEMA">{{ t('registros.todoElEcosistema') }}</option>
 					<option v-for="a in apps" :key="a.id" :value="a.id">
 						{{ etiquetaDeApp(a, t('registros.sinEntradas')) }}
 					</option>
 					<option :value="SISTEMA">{{ t('registros.todoElSistema') }}</option>
-				</Selector>
+				</SelectField>
 			</label>
 
 			<label class="flex items-center gap-2 text-sm text-tx-main">
@@ -130,7 +130,7 @@ onMounted(() => {
 				class="flex items-center gap-2 rounded-corner border border-ui-border px-3 py-1.5 text-sm text-tx-main hover:bg-ui-surface"
 				@click="cargar()"
 			>
-				<Icono nombre="view-refresh" :tamano="16" alt="" />
+				<ThemeIcon nombre="view-refresh" :tamano="16" alt="" />
 				{{ t('common.actualizar') }}
 			</button>
 		</header>
@@ -146,7 +146,7 @@ onMounted(() => {
 				class="flex flex-col gap-2 rounded-corner border border-ui-border bg-ui-surface/40 px-4 py-4"
 			>
 				<p class="flex items-center gap-2 text-sm text-tx-main">
-					<Icono nombre="dialog-information" :tamano="18" alt="" />
+					<ThemeIcon nombre="dialog-information" :tamano="18" alt="" />
 					{{ t('registros.nadaQueMostrar') }}
 				</p>
 				<p class="text-tx-muted text-xs">{{ t('registros.dondeEscriben') }}</p>
@@ -154,7 +154,7 @@ onMounted(() => {
 
 			<template v-else>
 				<p class="flex items-center gap-2 text-tx-muted text-xs">
-					<Icono nombre="text-x-generic" :tamano="14" alt="" />
+					<ThemeIcon nombre="text-x-generic" :tamano="14" alt="" />
 					{{ interpolar(t('registros.cuantas'), visibles.length) }}
 				</p>
 				<ul
