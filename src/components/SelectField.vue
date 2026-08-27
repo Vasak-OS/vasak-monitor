@@ -8,7 +8,7 @@
  * apaga — y entonces la flecha hay que poner a mano, porque desaparece con el
  * resto del dibujo nativo.
  */
-import Icono from '@/components/Icono.vue';
+import ThemeIcon from '@/components/ThemeIcon.vue';
 
 // Los atributos van al `select` y no al contenedor: si no, un `@change` o un
 // `aria-label` quedan colgados de un `div` y no hacen nada.
@@ -34,7 +34,7 @@ const [modelo, modificadores] = defineModel<string | number>({
 		>
 			<slot />
 		</select>
-		<Icono
+		<ThemeIcon
 			nombre="pan-down-symbolic"
 			:tamano="14"
 			alt=""

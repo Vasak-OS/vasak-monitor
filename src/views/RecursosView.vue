@@ -3,7 +3,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
 import { ref } from 'vue';
 import BarraDeCarga from '@/components/BarraDeCarga.vue';
-import Icono from '@/components/Icono.vue';
+import ThemeIcon from '@/components/ThemeIcon.vue';
 import { useSondeo } from '@/composables/useSondeo';
 import { caudal, porcentaje, tamano } from '@/tools/formato';
 import { interpolar } from '@/tools/interpolar';
@@ -60,7 +60,7 @@ const usoDeDisco = (d: Disco) => (d.total === 0 ? 0 : (d.usado / d.total) * 100)
 				<article class="flex flex-col gap-2 rounded-corner border border-ui-border bg-ui-surface/40 p-4">
 					<header class="flex flex-wrap items-baseline justify-between gap-x-3">
 						<h2 class="flex items-center gap-2 font-medium text-tx-main">
-							<Icono nombre="cpu" :tamano="18" />
+							<ThemeIcon nombre="cpu" :tamano="18" />
 							{{ t('recursos.cpu') }}
 						</h2>
 						<span class="font-mono text-lg text-tx-main">{{ porcentaje(datos.cpu) }}</span>
@@ -74,7 +74,7 @@ const usoDeDisco = (d: Disco) => (d.total === 0 ? 0 : (d.usado / d.total) * 100)
 				<article class="flex flex-col gap-2 rounded-corner border border-ui-border bg-ui-surface/40 p-4">
 					<header class="flex flex-wrap items-baseline justify-between gap-x-3">
 						<h2 class="flex items-center gap-2 font-medium text-tx-main">
-							<Icono nombre="memory" :tamano="18" />
+							<ThemeIcon nombre="memory" :tamano="18" />
 							{{ t('recursos.memoria') }}
 						</h2>
 						<span class="font-mono text-lg text-tx-main">{{ porcentaje(usoDeRam(datos)) }}</span>
@@ -96,7 +96,7 @@ const usoDeDisco = (d: Disco) => (d.total === 0 ? 0 : (d.usado / d.total) * 100)
 				>
 					<header class="flex flex-wrap items-baseline justify-between gap-x-3">
 						<h2 class="flex items-center gap-2 font-medium text-tx-main">
-							<Icono nombre="drive-harddisk" :tamano="18" />
+							<ThemeIcon nombre="drive-harddisk" :tamano="18" />
 							{{ t('recursos.swap') }}
 						</h2>
 						<span class="font-mono text-lg text-tx-main">{{ porcentaje(datos.swap) }}</span>
@@ -107,7 +107,7 @@ const usoDeDisco = (d: Disco) => (d.total === 0 ? 0 : (d.usado / d.total) * 100)
 
 				<article class="flex flex-col gap-2 rounded-corner border border-ui-border bg-ui-surface/40 p-4">
 					<h2 class="flex items-center gap-2 font-medium text-tx-main">
-							<Icono nombre="network-wired" :tamano="18" />
+							<ThemeIcon nombre="network-wired" :tamano="18" />
 							{{ t('recursos.red') }}
 						</h2>
 					<div class="flex gap-6 font-mono text-sm">
@@ -120,7 +120,7 @@ const usoDeDisco = (d: Disco) => (d.total === 0 ? 0 : (d.usado / d.total) * 100)
 
 			<article class="flex flex-col gap-3 rounded-corner border border-ui-border bg-ui-surface/40 p-4">
 				<h2 class="flex items-center gap-2 font-medium text-tx-main">
-							<Icono nombre="drive-multidisk" :tamano="18" />
+							<ThemeIcon nombre="drive-multidisk" :tamano="18" />
 							{{ t('recursos.discos') }}
 						</h2>
 				<div v-for="d in datos.discos" :key="d.punto" class="flex flex-col gap-1">
