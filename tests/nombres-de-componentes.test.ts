@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { readdirSync, statSync } from 'node:fs';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 /**
  * Los nombres de un componente de una sola palabra frenan el empaquetado.
@@ -15,7 +16,10 @@ import { join } from 'node:path';
  * etiqueta y no puede colisionar con un elemento HTML.
  */
 
-const RAIZ = new URL('../src', import.meta.url).pathname;
+// `fileURLToPath` y no `.pathname`: el segundo devuelve la ruta tal como va en
+// una URL, así que un directorio con un espacio o un acento en el nombre llega
+// con `%20` y `readdirSync` no encuentra nada.
+const RAIZ = fileURLToPath(new URL('../src', import.meta.url));
 const EXCEPCIONES = new Set(['App.vue']);
 
 function componentes(dir: string): string[] {
@@ -27,7 +31,7 @@ function componentes(dir: string): string[] {
 			continue;
 		}
 		if (entrada.endsWith('.vue') && !EXCEPCIONES.has(entrada)) {
-			encontrados.push(ruta.slice(RAIZ.length + 1));
+			encontrados.push(ruta);
 		}
 	}
 	return encontrados;
@@ -42,10 +46,9 @@ function palabras(nombreDeArchivo: string): number {
 
 describe('nombres de componentes', () => {
 	test('ninguno tiene una sola palabra', () => {
-		const deUnaPalabra = componentes(RAIZ).filter((ruta) => {
-			const nombre = ruta.split('/').pop() ?? ruta;
-			return palabras(nombre) < 2;
-		});
+		const deUnaPalabra = componentes(RAIZ)
+			.filter((ruta) => palabras(basename(ruta)) < 2)
+			.map((ruta) => ruta.slice(RAIZ.length + 1));
 
 		expect(deUnaPalabra).toEqual([]);
 	});

@@ -68,9 +68,14 @@ onUnmounted(() => soltarConfig?.());
 							? 'bg-primary/15 font-medium text-primary'
 							: 'text-tx-main hover:bg-ui-surface'
 					"
+					:aria-label="t(`pantallas.${p}`)"
 					@click="pantalla = p"
 				>
 					<ThemeIcon :nombre="ICONOS[p]" :tamano="18" />
+					<!-- El nombre se oculta por debajo de `sm`, y el icono es
+					     decorativo: sin el `aria-label` de arriba, el botón se queda
+					     angosto sin nombre accesible y un lector de pantalla no puede
+					     decir a qué pantalla lleva. -->
 					<span class="hidden truncate sm:inline">{{ t(`pantallas.${p}`) }}</span>
 				</button>
 
