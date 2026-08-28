@@ -115,3 +115,7 @@ registros:
     Los servicios escriben con su propio nombre. Una aplicación que se abre desde el
     menú, en cambio, escribe en el diario de la sesión del escritorio, así que sus
     mensajes aparecen ahí y no acá.
+windowControls:
+  minimize: Minimizar
+  maximize: Maximizar
+  close: Cerrar

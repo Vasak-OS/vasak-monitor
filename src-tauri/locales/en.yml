@@ -105,3 +105,7 @@ registros:
     Services write under their own name. An application opened from the menu writes
     to the desktop session's journal instead, so its messages show up there and not
     here.
+windowControls:
+  minimize: Minimize
+  maximize: Maximize
+  close: Close
