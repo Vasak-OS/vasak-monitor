@@ -1,18 +1,12 @@
 <script lang="ts" setup>
-import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
-import ThemeIcon from '@/components/ThemeIcon.vue';
 import ActionControlsComponent from '@/components/topbar/ActionControlsComponent.vue';
-
-const { t } = useI18n();
 </script>
 <template>
   <div class="flex justify-between p-1" data-tauri-drag-region>
-    <div class="flex flex-1 items-center gap-2 px-1" data-tauri-drag-region>
-      <!-- El título va acá y traducido, no en duro: la barra propia reemplaza a la
-           del gestor de ventanas, así que si no lo pone nadie la ventana no tiene
-           nombre en ninguna parte. -->
-      <ThemeIcon nombre="utilities-system-monitor" :tamano="16" />
-      <span class="text-sm text-tx-main">{{ t('app.titulo') }}</span>
+    <!-- `justify-between` con lo que venga del slot: el layout pone el icono, el
+         título y un espaciador vacío, y así el título queda centrado en la barra
+         como en el resto de las aplicaciones del escritorio. -->
+    <div class="flex flex-1 items-center justify-between gap-2 px-1" data-tauri-drag-region>
       <slot />
     </div>
     <ActionControlsComponent />
