@@ -621,17 +621,34 @@ fn estado_en_git(ruta: &std::path::Path) -> (bool, bool) {
 /// de 40 GB tarda— y la lista sirve desde el primer momento sin los tamaños; los
 /// pide después `medir_proyecto`, de a uno, así la interfaz los va completando en
 /// lugar de quedarse en blanco hasta que estén todos.
+/// Busca las carpetas, **fuera del hilo de la interfaz**.
+///
+/// El recorrido de `$HOME`, los `git check-ignore` y los `du` son todos
+/// bloqueantes. Un comando sincrónico de Tauri corre en el hilo principal, así que
+/// tal como estaba esto congelaba la ventana durante todo el escaneo —y un `du`
+/// sobre un `target` de 40 GB no se mide en milisegundos—. Peor todavía: el
+/// frontend pide los tamaños de a uno para irlos mostrando, y con el hilo tomado
+/// no podía dibujar ninguno hasta el final.
+///
+/// `spawn_blocking` y no sólo `async`: marcar la función como asíncrona sin mover
+/// el trabajo deja el bloqueo en el ejecutor, que es el mismo problema con otro
+/// nombre.
 #[tauri::command]
-pub fn proyectos_limpiables() -> Vec<proyectos::Hallazgo> {
-    let home = std::env::var("HOME").unwrap_or_default();
-    if home.is_empty() {
+pub async fn proyectos_limpiables() -> Vec<proyectos::Hallazgo> {
+    tauri::async_runtime::spawn_blocking(buscar_proyectos)
+        .await
+        .unwrap_or_default()
+}
+
+fn buscar_proyectos() -> Vec<proyectos::Hallazgo> {
+    let Some(home) = home_real() else {
         return Vec::new();
-    }
+    };
 
     // Seis niveles desde $HOME: `~/dev/organizacion/repo/paquete/` ya son cuatro.
     const PROFUNDIDAD: usize = 6;
 
-    let mut hallazgos: Vec<proyectos::Hallazgo> = proyectos::candidatas(std::path::Path::new(&home), PROFUNDIDAD)
+    let mut hallazgos: Vec<proyectos::Hallazgo> = proyectos::candidatas(&home, PROFUNDIDAD)
         .into_iter()
         .filter(|(ruta, patron)| {
             let (en_repo, ignorada) = estado_en_git(ruta);
@@ -655,9 +672,13 @@ pub fn proyectos_limpiables() -> Vec<proyectos::Hallazgo> {
 /// no rompe nada— sino porque este comando y `borrar_proyecto` comparten la
 /// validación, y tenerla en un solo lugar es lo que impide que se separen.
 #[tauri::command]
-pub fn medir_proyecto(ruta: String) -> Option<u64> {
-    let ruta = validar_candidata(&ruta).ok()?;
-    du_de(&ruta)
+pub async fn medir_proyecto(ruta: String) -> Option<u64> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let ruta = validar_candidata(&ruta).ok()?;
+        du_de(&ruta)
+    })
+    .await
+    .unwrap_or(None)
 }
 
 /// Comprueba que una ruta sea de verdad una candidata a borrar.
@@ -667,9 +688,22 @@ pub fn medir_proyecto(ruta: String) -> Option<u64> {
 /// no se confía: se vuelve a verificar todo desde cero —que esté bajo `$HOME`, que
 /// el nombre sea un patrón, que tenga su marca hermana y que git la ignore— en
 /// lugar de creerle a la lista que se mandó antes.
+/// El directorio del usuario, **resuelto**.
+///
+/// Canonicalizado y no el texto de `$HOME` a secas: si algún componente es un
+/// enlace —`/home/pato` → `/mnt/datos/pato`, que en una máquina con el home en
+/// otro disco es lo normal— la ruta canonicalizada de la candidata empieza con
+/// `/mnt/datos/pato` y el `$HOME` crudo dice `/home/pato`. La comparación falla,
+/// y falla **hacia el lado seguro**: no se borra nada de más, pero la función
+/// entera deja de servir —la lista aparece, todos los tamaños quedan en «…» y
+/// cada borrado responde «esa carpeta no está en el directorio del usuario»—.
+fn home_real() -> Option<std::path::PathBuf> {
+    std::env::var("HOME").ok()?.parse::<std::path::PathBuf>().ok()?.canonicalize().ok()
+}
+
 fn validar_candidata(texto: &str) -> Result<std::path::PathBuf, String> {
-    let home = std::env::var("HOME").map_err(|_| "sin HOME".to_string())?;
-    validar_bajo(texto, &home)
+    let home = home_real().ok_or_else(|| "no se pudo resolver el HOME".to_string())?;
+    validar_bajo(texto, &home.to_string_lossy())
 }
 
 /// La validación con el directorio del usuario explícito.
@@ -677,14 +711,27 @@ fn validar_candidata(texto: &str) -> Result<std::path::PathBuf, String> {
 /// Separada de `validar_candidata` para poder probarla: el `$HOME` del proceso es
 /// global y cambiarlo en un test afectaría a los que corren en paralelo.
 fn validar_bajo(texto: &str, home: &str) -> Result<std::path::PathBuf, String> {
+    // El home también se canonicaliza acá: quien llama puede pasar un texto con
+    // enlaces —los tests pasan `temp_dir()`, que en varios sistemas es uno— y
+    // comparar una ruta resuelta contra una que no lo está no funciona.
+    let home = std::path::PathBuf::from(home)
+        .canonicalize()
+        .map_err(|e| format!("no se pudo resolver el HOME: {e}"))?;
     let ruta = std::path::PathBuf::from(texto);
 
     // Canonicalizada: sin esto, `$HOME/../../etc` pasaría el prefijo.
     let real = ruta
         .canonicalize()
         .map_err(|e| format!("no se pudo resolver {texto}: {e}"))?;
-    if !real.starts_with(home) {
+    if !real.starts_with(&home) {
         return Err("esa carpeta no está en el directorio del usuario".to_string());
+    }
+
+    // La misma regla estructural que aplica el escaneo: lo que está suelto en el
+    // home es la configuración de una herramienta, no un proyecto. Acá se repite
+    // porque este comando no le cree a la lista.
+    if proyectos::es_hijo_directo(&real, &home) {
+        return Err("esa carpeta es del directorio del usuario, no de un proyecto".to_string());
     }
 
     let nombre = real
@@ -694,11 +741,11 @@ fn validar_bajo(texto: &str, home: &str) -> Result<std::path::PathBuf, String> {
     let patron = proyectos::patron_de(&nombre)
         .ok_or_else(|| format!("«{nombre}» no es una carpeta de proyecto"))?;
 
-    if let Some(marca) = patron.marca {
-        let hermana = real.parent().map(|p| p.join(marca).is_file()).unwrap_or(false);
-        if !hermana {
-            return Err(format!("no hay {marca} al lado: no parece un proyecto"));
-        }
+    if !proyectos::tiene_la_marca(&real, patron) {
+        return Err(format!(
+            "no hay ninguno de {:?} al lado: no parece un proyecto",
+            patron.marcas
+        ));
     }
 
     let (en_repo, ignorada) = estado_en_git(&real);
@@ -714,13 +761,18 @@ fn validar_bajo(texto: &str, home: &str) -> Result<std::path::PathBuf, String> {
 /// Sin `pkexec`: todo esto vive en el directorio del usuario y no hace falta
 /// autenticar. Pedir contraseña para borrar un `node_modules` propio sería teatro.
 #[tauri::command]
-pub fn borrar_proyecto(ruta: String) -> Result<u64, String> {
-    let real = validar_candidata(&ruta)?;
-    // Se mide antes de borrar: después no hay nada que medir, y el número es lo
-    // que la interfaz muestra como recuperado.
-    let bytes = du_de(&real).unwrap_or(0);
-    std::fs::remove_dir_all(&real).map_err(|e| format!("no se pudo borrar {}: {e}", real.display()))?;
-    Ok(bytes)
+pub async fn borrar_proyecto(ruta: String) -> Result<u64, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let real = validar_candidata(&ruta)?;
+        // Se mide antes de borrar: después no hay nada que medir, y el número es
+        // lo que la interfaz muestra como recuperado.
+        let bytes = du_de(&real).unwrap_or(0);
+        std::fs::remove_dir_all(&real)
+            .map_err(|e| format!("no se pudo borrar {}: {e}", real.display()))?;
+        Ok(bytes)
+    })
+    .await
+    .map_err(|e| format!("el borrado no terminó: {e}"))?
 }
 
 #[cfg(test)]
@@ -792,6 +844,47 @@ mod tests_proyectos {
         let home = raiz.to_string_lossy().into_owned();
         let falso = raiz.join("disenio/target");
         assert!(validar_bajo(&falso.to_string_lossy(), &home).is_err());
+        let _ = std::fs::remove_dir_all(&raiz);
+    }
+
+    #[test]
+    fn un_home_con_enlaces_igual_funciona() {
+        // Si algún componente del home es un enlace —`/home/pato` →
+        // `/mnt/datos/pato`, normal cuando el home está en otro disco— la ruta
+        // canonicalizada de la candidata no empieza con el texto crudo de $HOME.
+        // El fallo va hacia el lado seguro, pero rompe la función entera: la lista
+        // aparece, los tamaños quedan en «…» y cada borrado dice que la carpeta no
+        // está en el home.
+        let raiz = arbol("enlace");
+        let alias = std::env::temp_dir().join(format!("vsk-alias-{}", std::process::id()));
+        let _ = std::fs::remove_file(&alias);
+        #[cfg(unix)]
+        std::os::unix::fs::symlink(&raiz, &alias).expect("enlace");
+
+        // El home entra por el alias, la candidata por la ruta real.
+        let ruta = raiz.join("app/node_modules");
+        assert!(
+            validar_bajo(&ruta.to_string_lossy(), &alias.to_string_lossy()).is_ok(),
+            "un home con enlaces rompió la validación"
+        );
+
+        let _ = std::fs::remove_file(&alias);
+        let _ = std::fs::remove_dir_all(&raiz);
+    }
+
+    #[test]
+    fn una_hija_directa_del_home_se_rechaza() {
+        // La misma regla que aplica el escaneo, repetida acá porque este comando
+        // no le cree a la lista. `$HOME/.gradle` es el home de Gradle.
+        let raiz = arbol("hijadirecta");
+        let home = raiz.to_string_lossy().into_owned();
+        let gradle = raiz.join(".gradle");
+        std::fs::create_dir_all(&gradle).expect("crear");
+
+        assert!(
+            validar_bajo(&gradle.to_string_lossy(), &home).is_err(),
+            "se aceptó una hija directa del home"
+        );
         let _ = std::fs::remove_dir_all(&raiz);
     }
 

@@ -71,7 +71,19 @@ const todasElegidas = computed(
 	() => lista.value.length > 0 && elegidas.value.size === lista.value.length
 );
 
-const ocupada = computed(() => buscando.value || borrandoTodo.value || borrando.value !== null);
+/**
+ * Si hay algo en curso que impida tocar la lista.
+ *
+ * **`midiendo` cuenta.** `buscar` no espera a `medirTodo` —a propósito, para que
+ * la lista aparezca enseguida—, así que sin esto el botón de buscar se
+ * rehabilitaba mientras el bucle de medición seguía andando. Una segunda pulsación
+ * arrancaba un segundo bucle: el primero apagaba el cartel de «midiendo» antes de
+ * tiempo y llamaba a `ordenar()` mientras seguían llegando tamaños, así que las
+ * filas se movían debajo del puntero.
+ */
+const ocupada = computed(
+	() => buscando.value || midiendo.value || borrandoTodo.value || borrando.value !== null
+);
 
 function alternar(ruta: string) {
 	// Un Set nuevo y no `add`/`delete` sobre el mismo: Vue no ve las mutaciones

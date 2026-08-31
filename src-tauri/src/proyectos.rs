@@ -7,7 +7,7 @@
 //!
 //! # Qué se ofrece y qué no
 //!
-//! Borrar por nombre es peligroso, y por dos motivos distintos.
+//! Borrar por nombre es peligroso, y por tres motivos distintos.
 //!
 //! El primero es que los nombres se repiten. `target` es de Cargo sólo si hay un
 //! `Cargo.toml` al lado; en cualquier otro lugar puede ser la carpeta de un
@@ -21,8 +21,16 @@
 //! ofrece fuera de un repositorio si su nombre no deja lugar a dudas —eso es
 //! `inequivoca`—.
 //!
-//! Las dos reglas juntas significan que esto no puede borrar algo versionado ni
-//! algo que sólo se parece a una carpeta de dependencias.
+//! El tercero es la **ubicación**. Lo que vive suelto en `$HOME` con nombre de
+//! herramienta es el home de esa herramienta, no la carpeta de un proyecto:
+//! `$HOME/.gradle` tiene el `gradle.properties` global y los scripts de `init.d`,
+//! que no los regenera nadie. Por eso una hija directa de `$HOME` nunca se
+//! ofrece — es una regla estructural y no una lista de excepciones, así que
+//! también cubre `.cargo` o `.npm` el día que alguien los agregue como patrón.
+//!
+//! Las tres reglas juntas significan que esto no puede borrar algo versionado, ni
+//! algo que sólo se parece a una carpeta de dependencias, ni la configuración de
+//! una herramienta.
 
 use std::path::{Path, PathBuf};
 
@@ -47,12 +55,19 @@ pub struct Patron {
     /// El nombre exacto del directorio.
     pub nombre: &'static str,
     pub clase: Clase,
-    /// Un archivo que tiene que existir **al lado** para que cuente.
+    /// Los archivos que confirman que es un proyecto: **alcanza uno**.
     ///
     /// `target` sin `Cargo.toml` hermano no es de Cargo, y `vendor` sin `go.mod`
     /// no es de Go. Sin esta comprobación, «limpiar proyectos» se llevaría la
     /// carpeta `build` de cualquier cosa.
-    pub marca: Option<&'static str>,
+    ///
+    /// Es una lista y no uno solo porque varias herramientas tienen más de un
+    /// nombre para lo mismo: un proyecto Gradle se reconoce por `build.gradle` o
+    /// por `settings.gradle.kts`, y pedir sólo el primero dejaría afuera la mitad.
+    ///
+    /// Vacía significa «no hace falta ninguno», y eso hay que mirarlo dos veces:
+    /// un patrón sin marca se acepta en cualquier lugar donde aparezca su nombre.
+    pub marcas: &'static [&'static str],
     /// Si se puede ofrecer aunque no haya repositorio git que la ignore.
     ///
     /// Sólo para los nombres que no dejan lugar a dudas. `node_modules` es
@@ -69,45 +84,58 @@ pub const PATRONES: &[Patron] = &[
     Patron {
         nombre: "node_modules",
         clase: Clase::Node,
-        marca: Some("package.json"),
+        marcas: &["package.json"],
         inequivoca: true,
     },
     Patron {
         nombre: "target",
         clase: Clase::Cargo,
-        marca: Some("Cargo.toml"),
+        marcas: &["Cargo.toml"],
         inequivoca: true,
     },
     Patron {
         nombre: ".venv",
         clase: Clase::Python,
-        marca: None,
+        // Sin marca: `.venv` es siempre un entorno virtual. Y aunque apareciera
+        // suelto en `$HOME`, la regla de «nunca un hijo directo de $HOME» —ver
+        // `es_hijo_directo`— lo deja afuera.
+        marcas: &[],
         inequivoca: true,
     },
     Patron {
         nombre: "venv",
         clase: Clase::Python,
-        // `venv` sin punto es un nombre bastante común para otras cosas, así que
-        // pide una marca de proyecto Python.
-        marca: Some("pyproject.toml"),
+        // `venv` sin punto es un nombre bastante común para otras cosas.
+        marcas: &["pyproject.toml", "requirements.txt", "setup.py"],
         inequivoca: false,
     },
     Patron {
         nombre: "__pycache__",
         clase: Clase::Python,
-        marca: None,
+        marcas: &[],
         inequivoca: true,
     },
     Patron {
         nombre: ".gradle",
         clase: Clase::Gradle,
-        marca: None,
+        // **Con marcas obligatorias, y no es un detalle.** `$HOME/.gradle` es el
+        // home de Gradle: tiene el `gradle.properties` global y los scripts de
+        // `init.d`, que no los regenera nadie. Sin pedir un archivo de proyecto
+        // al lado, esta carpeta se ofrecía para borrar y se perdía configuración
+        // escrita a mano.
+        marcas: &[
+            "build.gradle",
+            "build.gradle.kts",
+            "settings.gradle",
+            "settings.gradle.kts",
+            "gradlew",
+        ],
         inequivoca: true,
     },
     Patron {
         nombre: "vendor",
         clase: Clase::Go,
-        marca: Some("go.mod"),
+        marcas: &["go.mod"],
         // Commitear `vendor` es práctica normal en Go: sólo se ofrece si el
         // repositorio lo ignora.
         inequivoca: false,
@@ -115,25 +143,25 @@ pub const PATRONES: &[Patron] = &[
     Patron {
         nombre: ".next",
         clase: Clase::Compilacion,
-        marca: Some("package.json"),
+        marcas: &["package.json"],
         inequivoca: true,
     },
     Patron {
         nombre: ".nuxt",
         clase: Clase::Compilacion,
-        marca: Some("package.json"),
+        marcas: &["package.json"],
         inequivoca: true,
     },
     Patron {
         nombre: "dist",
         clase: Clase::Compilacion,
-        marca: Some("package.json"),
+        marcas: &["package.json"],
         inequivoca: false,
     },
     Patron {
         nombre: "build",
         clase: Clase::Compilacion,
-        marca: Some("package.json"),
+        marcas: &["package.json"],
         inequivoca: false,
     },
 ];
@@ -208,11 +236,16 @@ pub fn proyecto_de(ruta: &Path) -> String {
 /// `se_puede_ofrecer`, que es lo que necesita git y no se puede probar sin él.
 pub fn candidatas(raiz: &Path, profundidad: usize) -> Vec<(PathBuf, &'static Patron)> {
     let mut encontradas = Vec::new();
-    recorrer(raiz, profundidad, &mut encontradas);
+    recorrer(raiz, raiz, profundidad, &mut encontradas);
     encontradas
 }
 
-fn recorrer(dir: &Path, resta: usize, salida: &mut Vec<(PathBuf, &'static Patron)>) {
+fn recorrer(
+    dir: &Path,
+    raiz: &Path,
+    resta: usize,
+    salida: &mut Vec<(PathBuf, &'static Patron)>,
+) {
     if resta == 0 {
         return;
     }
@@ -237,7 +270,10 @@ fn recorrer(dir: &Path, resta: usize, salida: &mut Vec<(PathBuf, &'static Patron
         let nombre = entrada.file_name().to_string_lossy().into_owned();
 
         if let Some(patron) = patron_de(&nombre) {
-            if tiene_la_marca(&ruta, patron) {
+            // La ubicación se comprueba antes que la marca: una hija directa de la
+            // raíz no se ofrece ni con marca, porque ahí lo que hay es el home de
+            // una herramienta y no un proyecto.
+            if !es_hijo_directo(&ruta, raiz) && tiene_la_marca(&ruta, patron) {
                 salida.push((ruta, patron));
                 // No se baja: lo de adentro se va con esto.
                 continue;
@@ -247,19 +283,34 @@ fn recorrer(dir: &Path, resta: usize, salida: &mut Vec<(PathBuf, &'static Patron
         if se_saltea(&nombre) {
             continue;
         }
-        recorrer(&ruta, resta - 1, salida);
+        recorrer(&ruta, raiz, resta - 1, salida);
     }
 }
 
-/// Si el archivo hermano que el patrón pide está donde tiene que estar.
-fn tiene_la_marca(ruta: &Path, patron: &Patron) -> bool {
-    match patron.marca {
-        None => true,
-        Some(marca) => ruta
-            .parent()
-            .map(|p| p.join(marca).is_file())
-            .unwrap_or(false),
+/// Si alguno de los archivos hermanos que el patrón pide está donde tiene que estar.
+///
+/// Alcanza uno: un proyecto Gradle tiene `build.gradle` **o** `settings.gradle.kts`,
+/// no los dos.
+pub fn tiene_la_marca(ruta: &Path, patron: &Patron) -> bool {
+    if patron.marcas.is_empty() {
+        return true;
     }
+    let Some(padre) = ruta.parent() else {
+        return false;
+    };
+    patron.marcas.iter().any(|m| padre.join(m).is_file())
+}
+
+/// Si una carpeta es hija directa del directorio del usuario.
+///
+/// Ninguna de esas se ofrece, y es una regla estructural, no una lista de
+/// excepciones. Lo que vive suelto en `$HOME` con nombre de herramienta es el
+/// **home de esa herramienta** —`.gradle`, `.cargo`, `.npm`—, no la carpeta de
+/// un proyecto: tiene configuración escrita a mano que no se regenera. Un
+/// proyecto de verdad está siempre dentro de su propio directorio, así que su
+/// carpeta de dependencias queda al menos dos niveles abajo.
+pub fn es_hijo_directo(ruta: &Path, home: &Path) -> bool {
+    ruta.parent() == Some(home)
 }
 
 #[cfg(test)]
@@ -419,6 +470,100 @@ mod tests {
         assert!(se_puede_ofrecer(patron("target"), false, false));
         assert!(!se_puede_ofrecer(patron("dist"), false, false));
         assert!(!se_puede_ofrecer(patron("vendor"), false, false));
+    }
+
+    // ── La ubicación ────────────────────────────────────────────────────────
+
+    #[test]
+    fn el_home_de_gradle_no_se_ofrece() {
+        // **Éste es el bug que se escapó.** `$HOME/.gradle` es el home de Gradle:
+        // tiene el `gradle.properties` global y los scripts de `init.d`, que no
+        // los regenera nadie. Con `marca: None` e `inequivoca: true` se ofrecía
+        // para borrar, y borrarlo es perder configuración escrita a mano.
+        //
+        // El test anterior de «ninguna carpeta de datos» no lo atrapaba porque
+        // `.gradle` no es una carpeta de datos por **nombre**: lo es por
+        // **ubicación**.
+        let a = Arbol::nuevo("gradlehome");
+        a.dir(".gradle");
+        a.dir(".gradle/init.d");
+        a.archivo(".gradle/gradle.properties");
+
+        assert!(
+            a.nombres(4).is_empty(),
+            "se ofreció el home de Gradle: {:?}",
+            a.nombres(4)
+        );
+    }
+
+    #[test]
+    fn el_gradle_de_un_proyecto_si_se_ofrece() {
+        // Con un archivo de proyecto al lado y a un nivel de profundidad, sí.
+        let a = Arbol::nuevo("gradleproy");
+        a.archivo("app/build.gradle.kts");
+        a.dir("app/.gradle");
+
+        assert_eq!(a.nombres(4), vec!["app/.gradle"]);
+    }
+
+    #[test]
+    fn alcanza_una_de_las_marcas() {
+        // Un proyecto Gradle se reconoce por `build.gradle` **o** por
+        // `settings.gradle.kts`, no por los dos. Con una marca única, la mitad de
+        // los proyectos quedaba afuera.
+        for marca in [
+            "build.gradle",
+            "build.gradle.kts",
+            "settings.gradle",
+            "settings.gradle.kts",
+            "gradlew",
+        ] {
+            let a = Arbol::nuevo("marcas");
+            a.archivo(&format!("p/{marca}"));
+            a.dir("p/.gradle");
+            assert_eq!(a.nombres(4), vec!["p/.gradle"], "con {marca}");
+        }
+    }
+
+    #[test]
+    fn ninguna_hija_directa_de_la_raiz_se_ofrece() {
+        // La regla es estructural, no una lista de excepciones: vale para
+        // cualquier patrón, incluidos los que no piden marca. Así queda cubierto
+        // `.cargo` o `.npm` el día que alguien los agregue.
+        let a = Arbol::nuevo("hijas");
+        a.dir(".venv");
+        a.dir("__pycache__");
+        a.archivo("package.json");
+        a.dir("node_modules");
+
+        assert!(
+            a.nombres(4).is_empty(),
+            "se ofreció una hija directa del home: {:?}",
+            a.nombres(4)
+        );
+    }
+
+    #[test]
+    fn un_nivel_mas_abajo_si() {
+        // Y que la regla no se pase de estricta: lo de un proyecto de verdad tiene
+        // que seguir apareciendo.
+        let a = Arbol::nuevo("unnivel");
+        a.archivo("proyecto/package.json");
+        a.dir("proyecto/node_modules");
+
+        assert_eq!(a.nombres(4), vec!["proyecto/node_modules"]);
+    }
+
+    #[test]
+    fn es_hijo_directo_compara_el_padre() {
+        assert!(es_hijo_directo(
+            Path::new("/home/pato/.gradle"),
+            Path::new("/home/pato")
+        ));
+        assert!(!es_hijo_directo(
+            Path::new("/home/pato/app/.gradle"),
+            Path::new("/home/pato")
+        ));
     }
 
     #[test]
