@@ -44,6 +44,12 @@ recursos:
   cacheExplicada: "{0} son caché de disco: el sistema la devuelve sola cuando alguien la necesita, así que no es consumo."
   swapExplicado: Páginas que quedaron en disco. Con memoria libre se pueden devolver desde Limpieza.
   redExplicada: Sin contar el tráfico local, que no sale de la máquina.
+  historial:
+    titulo: Últimos minutos
+    intro: Lo que se midió desde que se abrió la ventana.
+    sinDatos: Todavía no hay suficientes muestras.
+    maximo: "Máx {0}"
+    ahora: Ahora
 aplicaciones:
   buscar: Buscar una aplicación
   cuantas: "{0} aplicaciones"
@@ -102,6 +108,31 @@ limpieza:
     cache-del-kernel:
       titulo: Vaciar la caché de disco
       detalle: Deja el sistema «frío». Útil para medir algo desde cero, no como mejora.
+  proyectos:
+    titulo: Carpetas de proyectos
+    intro: >-
+      Dependencias y compilaciones que los proyectos vuelven a generar solos.
+      Suelen ser lo que más ocupa en una máquina de desarrollo.
+    seguridad: >-
+      Sólo aparece lo que el repositorio ignora. Una carpeta versionada no es
+      espacio recuperable: es contenido del proyecto, y borrarla lo rompe.
+    buscar: Buscar carpetas
+    buscando: Buscando…
+    midiendo: Midiendo…
+    vacio: No se encontró ninguna carpeta que se pueda recuperar.
+    borrar: Borrar
+    borrarSeleccion: Borrar lo elegido ({0})
+    seleccionarTodo: Elegir todo
+    limpiarSeleccion: No elegir nada
+    carpetas: "{0} carpetas"
+    recuperado: Se recuperaron {0}
+    clases:
+      node: Dependencias de npm
+      cargo: Compilación de Cargo
+      python: Entorno de Python
+      gradle: Caché de Gradle
+      go: Dependencias de Go
+      compilacion: Salida de compilación
 registros:
   soloProblemas: Sólo errores
   buscar: Buscar en los mensajes

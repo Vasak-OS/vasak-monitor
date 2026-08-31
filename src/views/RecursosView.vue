@@ -3,9 +3,11 @@ import { invoke } from '@tauri-apps/api/core';
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
 import { ref } from 'vue';
 import BarraDeCarga from '@/components/BarraDeCarga.vue';
+import GraficoDeUso from '@/components/GraficoDeUso.vue';
 import ThemeIcon from '@/components/ThemeIcon.vue';
 import { useSondeo } from '@/composables/useSondeo';
-import { caudal, porcentaje, tamano } from '@/tools/formato';
+import { caudal, porcentaje, tamano, tonoDeCarga } from '@/tools/formato';
+import { agregar } from '@/tools/historial';
 import { interpolar } from '@/tools/interpolar';
 
 interface Disco {
@@ -31,21 +33,53 @@ const { t } = useI18n();
 const datos = ref<Recursos | null>(null);
 const error = ref('');
 
+// Declaradas antes de `useSondeo` porque su callback las usa. Hoy funciona igual
+// —`useSondeo` mide desde `onMounted`, cuando el setup ya terminó— pero depender
+// de ese orden para que un `const` esté inicializado es esperar un ReferenceError.
+const usoDeRam = (d: Recursos) => (d.ram_total === 0 ? 0 : (d.ram_usada / d.ram_total) * 100);
+const usoDeDisco = (d: Disco) => (d.total === 0 ? 0 : (d.usado / d.total) * 100);
+
+/**
+ * La historia de cada medida, para los gráficos.
+ *
+ * En memoria y de la sesión: es lo que hacen todos los monitores del sistema, no
+ * escribe nada al disco y no agrega un formato que después haya que migrar.
+ *
+ * Se guarda una serie por medida y no un arreglo de muestras completas porque cada
+ * gráfico dibuja una sola, y así el componente recibe exactamente lo que necesita.
+ */
+const serieCpu = ref<(number | null)[]>([]);
+const serieRam = ref<(number | null)[]>([]);
+const serieSwap = ref<(number | null)[]>([]);
+const serieBajada = ref<(number | null)[]>([]);
+const serieSubida = ref<(number | null)[]>([]);
+
 useSondeo(
 	async () => {
 		try {
-			datos.value = await invoke<Recursos>('recursos');
+			const d = await invoke<Recursos>('recursos');
+			datos.value = d;
+			serieCpu.value = agregar(serieCpu.value, d.cpu);
+			serieRam.value = agregar(serieRam.value, usoDeRam(d));
+			serieSwap.value = agregar(serieSwap.value, d.swap);
+			serieBajada.value = agregar(serieBajada.value, d.bajada);
+			serieSubida.value = agregar(serieSubida.value, d.subida);
 			error.value = '';
 		} catch (e) {
 			error.value = String(e);
+			// El error también es historia: se anota el hueco en lugar de dejar la
+			// serie quieta, que dibujaría una línea recta diciendo que todo siguió
+			// igual mientras no se pudo medir.
+			serieCpu.value = agregar(serieCpu.value, null);
+			serieRam.value = agregar(serieRam.value, null);
+			serieSwap.value = agregar(serieSwap.value, null);
+			serieBajada.value = agregar(serieBajada.value, null);
+			serieSubida.value = agregar(serieSubida.value, null);
 		}
 	},
 	() => props.intervalo,
 	() => props.activa
 );
-
-const usoDeRam = (d: Recursos) => (d.ram_total === 0 ? 0 : (d.ram_usada / d.ram_total) * 100);
-const usoDeDisco = (d: Disco) => (d.total === 0 ? 0 : (d.usado / d.total) * 100);
 </script>
 
 <template>
@@ -66,6 +100,14 @@ const usoDeDisco = (d: Disco) => (d.total === 0 ? 0 : (d.usado / d.total) * 100)
 						<span class="font-mono text-lg text-tx-main">{{ porcentaje(datos.cpu) }}</span>
 					</header>
 					<BarraDeCarga :porciento="datos.cpu ?? 0" />
+					<GraficoDeUso
+						:serie="serieCpu"
+						:techo="100"
+						:tono="tonoDeCarga(datos.cpu ?? 0)"
+						:etiqueta="`${t('recursos.cpu')} — ${t('recursos.historial.titulo')}`"
+					>
+						<template #vacio>{{ t('recursos.historial.sinDatos') }}</template>
+					</GraficoDeUso>
 					<p class="text-tx-muted text-xs">
 						{{ interpolar(t('recursos.nucleos'), datos.nucleos) }}
 					</p>
@@ -80,6 +122,14 @@ const usoDeDisco = (d: Disco) => (d.total === 0 ? 0 : (d.usado / d.total) * 100)
 						<span class="font-mono text-lg text-tx-main">{{ porcentaje(usoDeRam(datos)) }}</span>
 					</header>
 					<BarraDeCarga :porciento="usoDeRam(datos)" />
+					<GraficoDeUso
+						:serie="serieRam"
+						:techo="100"
+						:tono="tonoDeCarga(usoDeRam(datos))"
+						:etiqueta="`${t('recursos.memoria')} — ${t('recursos.historial.titulo')}`"
+					>
+						<template #vacio>{{ t('recursos.historial.sinDatos') }}</template>
+					</GraficoDeUso>
 					<p class="text-tx-muted text-xs">
 						{{ interpolar(t('recursos.deTotal'), tamano(datos.ram_usada), tamano(datos.ram_total)) }}
 					</p>
@@ -102,6 +152,14 @@ const usoDeDisco = (d: Disco) => (d.total === 0 ? 0 : (d.usado / d.total) * 100)
 						<span class="font-mono text-lg text-tx-main">{{ porcentaje(datos.swap) }}</span>
 					</header>
 					<BarraDeCarga :porciento="datos.swap" />
+					<GraficoDeUso
+						:serie="serieSwap"
+						:techo="100"
+						:tono="tonoDeCarga(datos.swap)"
+						:etiqueta="`${t('recursos.swap')} — ${t('recursos.historial.titulo')}`"
+					>
+						<template #vacio>{{ t('recursos.historial.sinDatos') }}</template>
+					</GraficoDeUso>
 					<p class="text-tx-muted text-xs">{{ t('recursos.swapExplicado') }}</p>
 				</article>
 
@@ -114,6 +172,21 @@ const usoDeDisco = (d: Disco) => (d.total === 0 ? 0 : (d.usado / d.total) * 100)
 						<span class="text-tx-main">↓ {{ caudal(datos.bajada) }}</span>
 						<span class="text-tx-main">↑ {{ caudal(datos.subida) }}</span>
 					</div>
+					<!-- Sin techo fijo: la red no tiene un máximo conocido, así que cada
+					     gráfico se escala contra su propio pico. Van separados porque
+					     compartir escala esconde la subida, que suele ser mucho menor. -->
+					<GraficoDeUso
+						:serie="serieBajada"
+						:etiqueta="`${t('recursos.red')} ↓ — ${t('recursos.historial.titulo')}`"
+					>
+						<template #vacio>{{ t('recursos.historial.sinDatos') }}</template>
+					</GraficoDeUso>
+					<GraficoDeUso
+						:serie="serieSubida"
+						:etiqueta="`${t('recursos.red')} ↑ — ${t('recursos.historial.titulo')}`"
+					>
+						<template #vacio>{{ t('recursos.historial.sinDatos') }}</template>
+					</GraficoDeUso>
 					<p class="text-tx-muted text-xs">{{ t('recursos.redExplicada') }}</p>
 				</article>
 			</div>
