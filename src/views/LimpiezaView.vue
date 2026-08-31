@@ -2,6 +2,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
 import { computed, onMounted, ref } from 'vue';
+import ProyectosLimpiables from '@/components/ProyectosLimpiables.vue';
 import ThemeIcon from '@/components/ThemeIcon.vue';
 import { tamano } from '@/tools/formato';
 import { errorTrasLimpiarGrupo, hayLimpiezaEnCurso } from '@/tools/limpieza';
@@ -218,6 +219,11 @@ onMounted(cargar);
 					</li>
 				</ul>
 			</div>
+
+			<!-- Las carpetas de proyectos van al final y en su propia tarjeta: el
+			     escaneo es a pedido, así que no puede compartir el estado de carga
+			     con el resto, que se mide al abrir la pantalla. -->
+			<ProyectosLimpiables />
 		</template>
 	</section>
 </template>

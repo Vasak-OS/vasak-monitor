@@ -7,6 +7,7 @@ mod locales;
 pub mod muestreo;
 pub mod comandos;
 pub mod limpieza;
+pub mod proyectos;
 pub mod registros;
 pub mod servicios;
 
@@ -42,6 +43,9 @@ pub fn run() {
             comandos::recuperable,
             comandos::limpiar,
             comandos::limpiar_todo,
+            comandos::proyectos_limpiables,
+            comandos::medir_proyecto,
+            comandos::borrar_proyecto,
             comandos::apps_del_diario,
             comandos::registros_de_vasakos,
             comandos::desplazamiento_horario,

@@ -34,6 +34,12 @@ recursos:
   cacheExplicada: "{0} is disk cache: the system gives it back on its own when something needs it, so it is not consumption."
   swapExplicado: Pages left on disk. With free memory they can be brought back from Cleanup.
   redExplicada: Local traffic is not counted, since it never leaves the machine.
+  historial:
+    titulo: Last minutes
+    intro: What has been measured since this window opened.
+    sinDatos: Not enough samples yet.
+    maximo: "Max {0}"
+    ahora: Now
 aplicaciones:
   buscar: Search for an application
   cuantas: "{0} applications"
@@ -92,6 +98,31 @@ limpieza:
     cache-del-kernel:
       titulo: Empty the disk cache
       detalle: Leaves the system «cold». Useful to measure something from scratch, not as an improvement.
+  proyectos:
+    titulo: Project folders
+    intro: >-
+      Dependencies and build output that projects regenerate on their own. On a
+      development machine these are usually the largest thing on disk.
+    seguridad: >-
+      Only folders the repository ignores are listed. A tracked folder is not
+      recoverable space: it is project content, and deleting it breaks the repo.
+    buscar: Find folders
+    buscando: Searching…
+    midiendo: Measuring…
+    vacio: No recoverable folders were found.
+    borrar: Delete
+    borrarSeleccion: Delete selected ({0})
+    seleccionarTodo: Select all
+    limpiarSeleccion: Select none
+    carpetas: "{0} folders"
+    recuperado: Recovered {0}
+    clases:
+      node: npm dependencies
+      cargo: Cargo build output
+      python: Python environment
+      gradle: Gradle cache
+      go: Go dependencies
+      compilacion: Build output
 registros:
   soloProblemas: Errors only
   buscar: Search the messages

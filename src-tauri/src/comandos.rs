@@ -5,7 +5,7 @@
 //! eso importa el doble, porque es la aplicación que muestra el consumo.
 
 use crate::muestreo::{cpu, discos, memoria, procesos, red, ventanas};
-use crate::{limpieza, registros, servicios};
+use crate::{limpieza, proyectos, registros, servicios};
 use std::sync::{Mutex, OnceLock};
 use std::time::Instant;
 
@@ -584,5 +584,223 @@ mod tests {
         assert!(error.is_err());
         let error = accion_de_servicio("x.service".into(), "; rm -rf /".into(), true);
         assert!(error.is_err());
+    }
+}
+
+// ── Carpetas de proyectos de desarrollo ────────────────────────────────
+
+/// Si una carpeta cae dentro de un repositorio git, y si ese repositorio la ignora.
+///
+/// Una sola llamada contesta las dos cosas. `check-ignore` sale con 0 si la ruta
+/// está ignorada, 1 si no, y 128 si no hay repositorio — que es justo la
+/// distinción que hace falta y por eso se mira el código y no la salida.
+fn estado_en_git(ruta: &std::path::Path) -> (bool, bool) {
+    let Some(padre) = ruta.parent() else {
+        return (false, false);
+    };
+    let salida = std::process::Command::new("git")
+        .args(["-C", &padre.to_string_lossy(), "check-ignore", "-q", "--"])
+        .arg(ruta)
+        .output();
+
+    match salida {
+        Ok(s) => match s.status.code() {
+            Some(0) => (true, true),   // hay repo y la ignora
+            Some(1) => (true, false),  // hay repo y NO la ignora
+            _ => (false, false),       // 128: no hay repositorio
+        },
+        // Sin git instalado no se puede comprobar nada, así que se responde «no
+        // hay repo»: las inequívocas siguen ofreciéndose y el resto no.
+        Err(_) => (false, false),
+    }
+}
+
+/// Busca carpetas de dependencias y compilación que se puedan borrar.
+///
+/// Devuelve la lista **sin medir**. Medir es lo lento —un `du` sobre un `target`
+/// de 40 GB tarda— y la lista sirve desde el primer momento sin los tamaños; los
+/// pide después `medir_proyecto`, de a uno, así la interfaz los va completando en
+/// lugar de quedarse en blanco hasta que estén todos.
+#[tauri::command]
+pub fn proyectos_limpiables() -> Vec<proyectos::Hallazgo> {
+    let home = std::env::var("HOME").unwrap_or_default();
+    if home.is_empty() {
+        return Vec::new();
+    }
+
+    // Seis niveles desde $HOME: `~/dev/organizacion/repo/paquete/` ya son cuatro.
+    const PROFUNDIDAD: usize = 6;
+
+    let mut hallazgos: Vec<proyectos::Hallazgo> = proyectos::candidatas(std::path::Path::new(&home), PROFUNDIDAD)
+        .into_iter()
+        .filter(|(ruta, patron)| {
+            let (en_repo, ignorada) = estado_en_git(ruta);
+            proyectos::se_puede_ofrecer(patron, en_repo, ignorada)
+        })
+        .map(|(ruta, patron)| proyectos::Hallazgo {
+            proyecto: proyectos::proyecto_de(&ruta),
+            clase: patron.clase,
+            ruta,
+            bytes: None,
+        })
+        .collect();
+
+    hallazgos.sort_by(|a, b| a.ruta.cmp(&b.ruta));
+    hallazgos
+}
+
+/// El tamaño de una de las carpetas encontradas.
+///
+/// Se comprueba que sea una candidata antes de medirla. No es por el `du` —medir
+/// no rompe nada— sino porque este comando y `borrar_proyecto` comparten la
+/// validación, y tenerla en un solo lugar es lo que impide que se separen.
+#[tauri::command]
+pub fn medir_proyecto(ruta: String) -> Option<u64> {
+    let ruta = validar_candidata(&ruta).ok()?;
+    du_de(&ruta)
+}
+
+/// Comprueba que una ruta sea de verdad una candidata a borrar.
+///
+/// **Esto es lo que impide que el frontend pida borrar cualquier cosa.** El
+/// comando recibe un texto, y un texto puede ser `/home/pato/Documentos`. Así que
+/// no se confía: se vuelve a verificar todo desde cero —que esté bajo `$HOME`, que
+/// el nombre sea un patrón, que tenga su marca hermana y que git la ignore— en
+/// lugar de creerle a la lista que se mandó antes.
+fn validar_candidata(texto: &str) -> Result<std::path::PathBuf, String> {
+    let home = std::env::var("HOME").map_err(|_| "sin HOME".to_string())?;
+    validar_bajo(texto, &home)
+}
+
+/// La validación con el directorio del usuario explícito.
+///
+/// Separada de `validar_candidata` para poder probarla: el `$HOME` del proceso es
+/// global y cambiarlo en un test afectaría a los que corren en paralelo.
+fn validar_bajo(texto: &str, home: &str) -> Result<std::path::PathBuf, String> {
+    let ruta = std::path::PathBuf::from(texto);
+
+    // Canonicalizada: sin esto, `$HOME/../../etc` pasaría el prefijo.
+    let real = ruta
+        .canonicalize()
+        .map_err(|e| format!("no se pudo resolver {texto}: {e}"))?;
+    if !real.starts_with(home) {
+        return Err("esa carpeta no está en el directorio del usuario".to_string());
+    }
+
+    let nombre = real
+        .file_name()
+        .map(|n| n.to_string_lossy().into_owned())
+        .unwrap_or_default();
+    let patron = proyectos::patron_de(&nombre)
+        .ok_or_else(|| format!("«{nombre}» no es una carpeta de proyecto"))?;
+
+    if let Some(marca) = patron.marca {
+        let hermana = real.parent().map(|p| p.join(marca).is_file()).unwrap_or(false);
+        if !hermana {
+            return Err(format!("no hay {marca} al lado: no parece un proyecto"));
+        }
+    }
+
+    let (en_repo, ignorada) = estado_en_git(&real);
+    if !proyectos::se_puede_ofrecer(patron, en_repo, ignorada) {
+        return Err("esa carpeta está versionada o su nombre no es concluyente".to_string());
+    }
+
+    Ok(real)
+}
+
+/// Borra una de las carpetas encontradas.
+///
+/// Sin `pkexec`: todo esto vive en el directorio del usuario y no hace falta
+/// autenticar. Pedir contraseña para borrar un `node_modules` propio sería teatro.
+#[tauri::command]
+pub fn borrar_proyecto(ruta: String) -> Result<u64, String> {
+    let real = validar_candidata(&ruta)?;
+    // Se mide antes de borrar: después no hay nada que medir, y el número es lo
+    // que la interfaz muestra como recuperado.
+    let bytes = du_de(&real).unwrap_or(0);
+    std::fs::remove_dir_all(&real).map_err(|e| format!("no se pudo borrar {}: {e}", real.display()))?;
+    Ok(bytes)
+}
+
+#[cfg(test)]
+mod tests_proyectos {
+    use super::*;
+
+    /// Un árbol con un proyecto de verdad y cosas que no hay que tocar.
+    ///
+    /// El nombre entra por parámetro y no es cosmético: los tests corren en
+    /// paralelo, y con un único directorio compartido cada uno borraba el árbol
+    /// del otro a mitad de camino. Pasaban de a uno y fallaban en conjunto, que
+    /// es la forma más molesta de test roto.
+    fn arbol(nombre: &str) -> std::path::PathBuf {
+        let dir = std::env::temp_dir().join(format!("vsk-val-{nombre}-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(dir.join("app/node_modules")).expect("crear");
+        std::fs::write(dir.join("app/package.json"), b"{}").expect("marca");
+        // Un `target` sin Cargo.toml al lado: se parece y no lo es.
+        std::fs::create_dir_all(dir.join("disenio/target")).expect("crear");
+        // Y una carpeta de datos, que no es candidata de ninguna forma.
+        std::fs::create_dir_all(dir.join("Documentos")).expect("crear");
+        dir
+    }
+
+    #[test]
+    fn una_candidata_de_verdad_pasa() {
+        let raiz = arbol("ok");
+        let home = raiz.to_string_lossy().into_owned();
+        let ruta = raiz.join("app/node_modules");
+        assert!(
+            validar_bajo(&ruta.to_string_lossy(), &home).is_ok(),
+            "se rechazó un node_modules legítimo"
+        );
+        let _ = std::fs::remove_dir_all(&raiz);
+    }
+
+    #[test]
+    fn no_se_puede_borrar_fuera_del_home() {
+        // El comando recibe un texto, y un texto puede ser cualquier cosa. Esto
+        // es lo que separa «recuperar espacio» de «borrar el sistema».
+        let raiz = arbol("fuera");
+        let home = raiz.to_string_lossy().into_owned();
+        assert!(validar_bajo("/etc", &home).is_err());
+        assert!(validar_bajo("/", &home).is_err());
+        // Y con un `..` que se escapa, que es el intento que un prefijo ingenuo
+        // no atrapa: por eso la ruta se canonicaliza antes de comparar.
+        let escape = format!("{home}/app/../../../../etc");
+        assert!(validar_bajo(&escape, &home).is_err(), "un .. se escapó del home");
+        let _ = std::fs::remove_dir_all(&raiz);
+    }
+
+    #[test]
+    fn una_carpeta_de_datos_no_es_candidata() {
+        let raiz = arbol("datos");
+        let home = raiz.to_string_lossy().into_owned();
+        let docs = raiz.join("Documentos");
+        assert!(
+            validar_bajo(&docs.to_string_lossy(), &home).is_err(),
+            "se aceptó una carpeta de datos"
+        );
+        let _ = std::fs::remove_dir_all(&raiz);
+    }
+
+    #[test]
+    fn sin_la_marca_hermana_se_rechaza() {
+        // `target` sin Cargo.toml al lado. La lista no lo ofrecería, pero el
+        // comando no le cree a la lista: vuelve a comprobarlo.
+        let raiz = arbol("marca");
+        let home = raiz.to_string_lossy().into_owned();
+        let falso = raiz.join("disenio/target");
+        assert!(validar_bajo(&falso.to_string_lossy(), &home).is_err());
+        let _ = std::fs::remove_dir_all(&raiz);
+    }
+
+    #[test]
+    fn una_ruta_que_no_existe_se_rechaza() {
+        let raiz = arbol("inexistente");
+        let home = raiz.to_string_lossy().into_owned();
+        let inventada = raiz.join("no/existe/node_modules");
+        assert!(validar_bajo(&inventada.to_string_lossy(), &home).is_err());
+        let _ = std::fs::remove_dir_all(&raiz);
     }
 }
