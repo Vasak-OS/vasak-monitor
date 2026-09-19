@@ -125,9 +125,17 @@ describe('el intervalo de medición', () => {
 		// dejarse afuera, y sin él no hay forma de bajar el muestreo.
 		const vista = await abrirElMonitor();
 
-        const barra = vista.findComponent(SideBar);
-		expect(barra.find('select').exists()).toBe(true);
-		expect(barra.text()).toContain('ajustes.intervalo');
+		const barra = vista.findComponent(SideBar);
+		const select = barra.find('select');
+		expect(select.exists()).toBe(true);
+
+		// Y su nombre queda atado al control. La etiqueta la pone el propio
+		// selector: suelta al lado no estaba asociada a nada, así que un lector
+		// de pantalla anunciaba un desplegable sin nombre y hacer clic en el
+		// texto no abría la lista.
+		const etiqueta = barra.findAll('label').find((l) => l.text() === 'ajustes.intervalo');
+		expect(etiqueta).toBeDefined();
+		expect(etiqueta?.attributes('for')).toBe(select.attributes('id'));
 	});
 
 	test('y dice que la medición se pausa con la ventana tapada', async () => {

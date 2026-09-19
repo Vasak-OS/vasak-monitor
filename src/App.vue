@@ -86,8 +86,11 @@ onUnmounted(() => soltarConfig?.());
 					<!-- El intervalo, al pie. Plegada no entra ni la etiqueta ni el
 					     desplegable, así que se esconde. -->
 					<div v-if="!collapsed" class="mt-auto flex flex-col gap-1 pt-3">
-						<label class="text-tx-muted text-xs">{{ t('ajustes.intervalo') }}</label>
-						<SelectField v-model.number="intervalo">
+						<!-- La etiqueta la pone el propio selector y queda atada al control:
+						     suelta acá al lado no estaba asociada a nada, así que un lector
+						     de pantalla anunciaba un desplegable sin nombre y hacer clic en
+						     el texto no abría la lista. -->
+						<SelectField v-model.number="intervalo" :label="t('ajustes.intervalo')">
 							<option v-for="i in INTERVALOS" :key="i" :value="i">{{ i / 1000 }} s</option>
 						</SelectField>
 						<!-- Se dice que la medición se pausa: sin eso, alguien que abre el
