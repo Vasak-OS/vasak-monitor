@@ -91,7 +91,7 @@ useSondeo(
 
 		<template v-else>
 			<div class="grid gap-3 @lg:grid-cols-2">
-				<article class="flex flex-col gap-2 rounded-corner border border-ui-border bg-ui-surface/40 p-4">
+				<article class="flex flex-col gap-2 rounded-corner border border-ui-border bg-ui-surface/70 p-4">
 					<header class="flex flex-wrap items-baseline justify-between gap-x-3">
 						<h2 class="flex items-center gap-2 font-medium text-tx-main">
 							<ThemeIcon nombre="cpu" :tamano="18" />
@@ -113,7 +113,7 @@ useSondeo(
 					</p>
 				</article>
 
-				<article class="flex flex-col gap-2 rounded-corner border border-ui-border bg-ui-surface/40 p-4">
+				<article class="flex flex-col gap-2 rounded-corner border border-ui-border bg-ui-surface/70 p-4">
 					<header class="flex flex-wrap items-baseline justify-between gap-x-3">
 						<h2 class="flex items-center gap-2 font-medium text-tx-main">
 							<ThemeIcon nombre="memory" :tamano="18" />
@@ -142,7 +142,7 @@ useSondeo(
 
 				<article
 					v-if="datos.swap !== null"
-					class="flex flex-col gap-2 rounded-corner border border-ui-border bg-ui-surface/40 p-4"
+					class="flex flex-col gap-2 rounded-corner border border-ui-border bg-ui-surface/70 p-4"
 				>
 					<header class="flex flex-wrap items-baseline justify-between gap-x-3">
 						<h2 class="flex items-center gap-2 font-medium text-tx-main">
@@ -163,7 +163,7 @@ useSondeo(
 					<p class="text-tx-muted text-xs">{{ t('recursos.swapExplicado') }}</p>
 				</article>
 
-				<article class="flex flex-col gap-2 rounded-corner border border-ui-border bg-ui-surface/40 p-4">
+				<article class="flex flex-col gap-2 rounded-corner border border-ui-border bg-ui-surface/70 p-4">
 					<h2 class="flex items-center gap-2 font-medium text-tx-main">
 							<ThemeIcon nombre="network-wired" :tamano="18" />
 							{{ t('recursos.red') }}
@@ -191,7 +191,7 @@ useSondeo(
 				</article>
 			</div>
 
-			<article class="flex flex-col gap-3 rounded-corner border border-ui-border bg-ui-surface/40 p-4">
+			<article class="flex flex-col gap-3 rounded-corner border border-ui-border bg-ui-surface/70 p-4">
 				<h2 class="flex items-center gap-2 font-medium text-tx-main">
 							<ThemeIcon nombre="drive-multidisk" :tamano="18" />
 							{{ t('recursos.discos') }}

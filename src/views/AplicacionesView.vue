@@ -66,7 +66,7 @@ async function cerrar(a: Aplicacion) {
 				v-model="filtro"
 				type="search"
 				:placeholder="t('aplicaciones.buscar')"
-				class="min-w-40 flex-1 rounded-corner border border-ui-border bg-ui-surface/40 px-3 py-1.5 text-sm text-tx-main"
+				class="min-w-40 flex-1 rounded-corner border border-ui-border bg-ui-surface/70 px-3 py-1.5 text-sm text-tx-main"
 			/>
 			<span class="shrink-0 text-tx-muted text-xs">
 				{{ interpolar(t('aplicaciones.cuantas'), conVentana.length) }}
@@ -87,7 +87,7 @@ async function cerrar(a: Aplicacion) {
 			<li
 				v-for="a in conVentana"
 				:key="a.pid"
-				class="flex flex-wrap items-center gap-x-3 gap-y-1 bg-ui-surface/40 px-3 py-2.5 sm:px-4"
+				class="flex flex-wrap items-center gap-x-3 gap-y-1 bg-ui-surface/70 px-3 py-2.5 sm:px-4"
 			>
 				<ThemeIcon :nombre="a.nombre" :tamano="20" />
 				<!-- `basis-0` con `min-w-32`: el nombre se lleva el espacio que sobra
@@ -103,7 +103,7 @@ async function cerrar(a: Aplicacion) {
 					{{ t('aplicaciones.cerrar') }}
 				</button>
 			</li>
-			<li v-if="conVentana.length === 0" class="bg-ui-surface/40 px-4 py-3 text-sm text-tx-muted">
+			<li v-if="conVentana.length === 0" class="bg-ui-surface/70 px-4 py-3 text-sm text-tx-muted">
 				{{ t('aplicaciones.ningunaConVentana') }}
 			</li>
 		</ul>
@@ -132,7 +132,7 @@ async function cerrar(a: Aplicacion) {
 				<li
 					v-for="a in sinVentana"
 					:key="a.pid"
-					class="flex flex-wrap items-center gap-x-3 gap-y-1 bg-ui-surface/40 px-3 py-2 sm:px-4"
+					class="flex flex-wrap items-center gap-x-3 gap-y-1 bg-ui-surface/70 px-3 py-2 sm:px-4"
 				>
 					<span class="min-w-32 flex-1 basis-0 truncate text-sm text-tx-muted">{{ a.nombre }}</span>
 					<span class="shrink-0 font-mono text-tx-muted text-xs">{{ tamano(a.memoria) }}</span>
