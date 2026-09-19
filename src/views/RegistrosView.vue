@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { invoke } from '@tauri-apps/api/core';
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
+import { SelectField } from '@vasakgroup/vue-libvasak';
 import { computed, onMounted, ref } from 'vue';
-import SelectField from '@/components/SelectField.vue';
 import ThemeIcon from '@/components/ThemeIcon.vue';
 import { interpolar } from '@/tools/interpolar';
 import {
@@ -122,7 +122,7 @@ onMounted(() => {
 				v-model="filtro"
 				type="search"
 				:placeholder="t('registros.buscar')"
-				class="min-w-40 flex-1 rounded-corner border border-ui-border bg-ui-surface/40 px-3 py-1.5 text-sm text-tx-main"
+				class="min-w-40 flex-1 rounded-corner border border-ui-border bg-ui-surface/70 px-3 py-1.5 text-sm text-tx-main"
 			/>
 
 			<button
@@ -143,7 +143,7 @@ onMounted(() => {
 		<template v-else>
 			<div
 				v-if="vacioDeUnaApp"
-				class="flex flex-col gap-2 rounded-corner border border-ui-border bg-ui-surface/40 px-4 py-4"
+				class="flex flex-col gap-2 rounded-corner border border-ui-border bg-ui-surface/70 px-4 py-4"
 			>
 				<p class="flex items-center gap-2 text-sm text-tx-main">
 					<ThemeIcon nombre="dialog-information" :tamano="18" alt="" />
@@ -168,7 +168,7 @@ onMounted(() => {
 					<li
 						v-for="(e, i) in visibles"
 						:key="`${e.microsegundos}-${i}`"
-						class="flex flex-col gap-0.5 bg-ui-surface/40 px-3 py-2 sm:flex-row sm:gap-3 sm:px-4"
+						class="flex flex-col gap-0.5 bg-ui-surface/70 px-3 py-2 sm:flex-row sm:gap-3 sm:px-4"
 					>
 						<div class="flex shrink-0 items-baseline gap-2 sm:gap-3">
 							<span class="font-mono text-tx-muted text-xs">{{ hora(e.microsegundos) }}</span>

@@ -3,8 +3,8 @@ import type { UnlistenFn } from '@tauri-apps/api/event';
 import { listen } from '@tauri-apps/api/event';
 import { useConfigStore } from '@vasakgroup/plugin-config-manager';
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
+import { SelectField, SideBar, SideButton } from '@vasakgroup/vue-libvasak';
 import { onMounted, onUnmounted, ref } from 'vue';
-import SelectField from '@/components/SelectField.vue';
 import ThemeIcon from '@/components/ThemeIcon.vue';
 import WindowAppLayout from '@/layouts/WindowAppLayout.vue';
 import { esEnVivo, INTERVALO_POR_OMISION, INTERVALOS, intervaloValido } from '@/tools/sondeo';
@@ -54,41 +54,51 @@ onUnmounted(() => soltarConfig?.());
 
 <template>
 	<WindowAppLayout>
-		<div class="flex h-full min-h-0 w-full">
-			<nav
-				class="flex w-14 shrink-0 flex-col gap-1 overflow-hidden border-ui-border border-r p-2 transition-all sm:w-52 sm:p-3"
+		<!-- `gap-1 p-1` como en Configuración y en la tienda: la barra es una
+		     tarjeta con borde y esquina redondeada, y pegada al borde de la ventana
+		     se le come el redondeo. Antes no hacía falta porque era un `<nav>` con
+		     un borde derecho, que sí quería llegar hasta el filo. -->
+		<div class="flex h-full min-h-0 w-full gap-1 p-1">
+			<!-- La barra es la de `@vasakgroup/vue-libvasak`, que es la de
+			     Configuración: acá había una escrita a mano que se parecía pero no
+			     era, y que no se podía plegar —sólo se angostaba sola por debajo de
+			     `sm`—. Sin área de título: el nombre de la ventana ya está en la
+			     barra superior y repetirlo gastaría la mitad del alto.
+			
+			     Con botones sueltos y no con `categories`: las cinco pantallas no
+			     están agrupadas, y un grupo con título sería un encabezado que hoy
+			     no existe. -->
+			<SideBar
+				:collapse-label="t('barraLateral.plegar')"
+				:expand-label="t('barraLateral.desplegar')"
 			>
-				<button
-					v-for="p in PANTALLAS"
-					:key="p"
-					type="button"
-					class="flex items-center justify-center gap-2 rounded-corner px-2 py-2 text-left text-sm transition-colors sm:justify-start sm:px-3"
-					:class="
-						pantalla === p
-							? 'bg-primary/15 font-medium text-primary'
-							: 'text-tx-main hover:bg-ui-surface'
-					"
-					:aria-label="t(`pantallas.${p}`)"
-					@click="pantalla = p"
-				>
-					<ThemeIcon :nombre="ICONOS[p]" :tamano="18" />
-					<!-- El nombre se oculta por debajo de `sm`, y el icono es
-					     decorativo: sin el `aria-label` de arriba, el botón se queda
-					     angosto sin nombre accesible y un lector de pantalla no puede
-					     decir a qué pantalla lleva. -->
-					<span class="hidden truncate sm:inline">{{ t(`pantallas.${p}`) }}</span>
-				</button>
+				<template #default="{ collapsed }">
+					<SideButton
+						v-for="p in PANTALLAS"
+						:key="p"
+						:label="t(`pantallas.${p}`)"
+						:icon="ICONOS[p]"
+						:active="pantalla === p"
+						:collapsed="collapsed"
+						@click="pantalla = p"
+					/>
 
-				<div class="mt-auto hidden flex-col gap-1 pt-3 sm:flex">
-					<label class="text-tx-muted text-xs">{{ t('ajustes.intervalo') }}</label>
-					<SelectField v-model.number="intervalo">
-						<option v-for="i in INTERVALOS" :key="i" :value="i">{{ i / 1000 }} s</option>
-					</SelectField>
-					<!-- Se dice que la medición se pausa: sin eso, alguien que abre el
-					     monitor y lo deja de fondo supone que sigue gastando. -->
-					<p class="text-tx-muted text-[11px]">{{ t('ajustes.pausaExplicada') }}</p>
-				</div>
-			</nav>
+					<!-- El intervalo, al pie. Plegada no entra ni la etiqueta ni el
+					     desplegable, así que se esconde. -->
+					<div v-if="!collapsed" class="mt-auto flex flex-col gap-1 pt-3">
+						<!-- La etiqueta la pone el propio selector y queda atada al control:
+						     suelta acá al lado no estaba asociada a nada, así que un lector
+						     de pantalla anunciaba un desplegable sin nombre y hacer clic en
+						     el texto no abría la lista. -->
+						<SelectField v-model.number="intervalo" :label="t('ajustes.intervalo')">
+							<option v-for="i in INTERVALOS" :key="i" :value="i">{{ i / 1000 }} s</option>
+						</SelectField>
+						<!-- Se dice que la medición se pausa: sin eso, alguien que abre el
+						     monitor y lo deja de fondo supone que sigue gastando. -->
+						<p class="text-tx-muted text-[11px]">{{ t('ajustes.pausaExplicada') }}</p>
+					</div>
+				</template>
+			</SideBar>
 
 			<!-- `@container`: lo que decide si algo cabe es el ancho de **esta** área, no
 			     el de la ventana. Con cortes por viewport, la barra lateral de 208 px

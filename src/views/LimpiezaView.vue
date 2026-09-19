@@ -127,7 +127,7 @@ onMounted(cargar);
 		<p v-if="cargando" class="text-sm text-tx-muted">{{ t('limpieza.midiendo') }}</p>
 
 		<template v-else>
-			<article class="rounded-corner border border-ui-border bg-ui-surface/40 p-4">
+			<article class="rounded-corner border border-ui-border bg-ui-surface/70 p-4">
 				<p class="flex items-center gap-2 text-tx-muted text-xs">
 					<ThemeIcon nombre="drive-harddisk" :tamano="14" />
 					{{ t('limpieza.totalEtiqueta') }}
@@ -155,7 +155,7 @@ onMounted(cargar);
 					<li
 						v-for="r in deDisco"
 						:key="r.tarea"
-						class="flex flex-wrap items-center gap-x-3 gap-y-1 bg-ui-surface/40 px-3 py-3 sm:px-4"
+						class="flex flex-wrap items-center gap-x-3 gap-y-1 bg-ui-surface/70 px-3 py-3 sm:px-4"
 					>
 						<ThemeIcon :nombre="ICONOS[r.tarea]" :tamano="20" />
 						<div class="min-w-40 flex-1 basis-0">
@@ -201,7 +201,7 @@ onMounted(cargar);
 					<li
 						v-for="r in deMemoria"
 						:key="r.tarea"
-						class="flex flex-wrap items-center gap-x-3 gap-y-1 bg-ui-surface/40 px-3 py-3 sm:px-4"
+						class="flex flex-wrap items-center gap-x-3 gap-y-1 bg-ui-surface/70 px-3 py-3 sm:px-4"
 					>
 						<ThemeIcon :nombre="ICONOS[r.tarea]" :tamano="20" />
 						<div class="min-w-40 flex-1 basis-0">

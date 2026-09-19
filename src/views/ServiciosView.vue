@@ -93,7 +93,7 @@ onMounted(cargar);
 		<p v-if="cargando" class="text-sm text-tx-muted">{{ t('common.cargando') }}</p>
 
 		<ul v-else class="divide-y divide-ui-border overflow-hidden rounded-corner border border-ui-border">
-			<li v-for="s in visibles" :key="s.unidad" class="flex flex-wrap items-center gap-3 bg-ui-surface/40 px-4 py-2.5">
+			<li v-for="s in visibles" :key="s.unidad" class="flex flex-wrap items-center gap-3 bg-ui-surface/70 px-4 py-2.5">
 				<div class="min-w-0 flex-1">
 					<div class="flex items-center gap-2">
 						<ThemeIcon nombre="system-run" :tamano="16" />

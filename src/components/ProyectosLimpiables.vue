@@ -191,7 +191,7 @@ async function borrarElegidas() {
 </script>
 
 <template>
-	<article class="flex flex-col gap-3 rounded-corner border border-ui-border bg-ui-surface/40 p-4">
+	<article class="flex flex-col gap-3 rounded-corner border border-ui-border bg-ui-surface/70 p-4">
 		<header class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
 			<h2 class="flex items-center gap-2 font-medium text-tx-main">
 				<ThemeIcon nombre="applications-development" :tamano="18" />
