@@ -4,6 +4,13 @@
    donde no hay ninguno: ninguna de las dos declaraciones puede pisar a la otra. */
 @import "tailwindcss";
 
+/* Tailwind no mira adentro de `node_modules`, así que las clases que sólo usa
+   la librería de componentes —los anchos de la barra lateral, el tamaño de los
+   iconos, los paddings— no llegaban a la hoja de estilos: el componente se
+   dibujaba sin la mitad de sus reglas. Se veía como una maqueta rota, no como
+   un error, que es la peor forma de romperse. */
+@source "../../node_modules/@vasakgroup/vue-libvasak/dist";
+
 :root {
   /* general */
   --corner-radius: 10px;

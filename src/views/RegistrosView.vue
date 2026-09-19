@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { invoke } from '@tauri-apps/api/core';
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
+import { SelectField } from '@vasakgroup/vue-libvasak';
 import { computed, onMounted, ref } from 'vue';
-import SelectField from '@/components/SelectField.vue';
 import ThemeIcon from '@/components/ThemeIcon.vue';
 import { interpolar } from '@/tools/interpolar';
 import {

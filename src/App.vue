@@ -3,9 +3,8 @@ import type { UnlistenFn } from '@tauri-apps/api/event';
 import { listen } from '@tauri-apps/api/event';
 import { useConfigStore } from '@vasakgroup/plugin-config-manager';
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
-import { SideBar, SideButton } from '@vasakgroup/vue-libvasak';
+import { SelectField, SideBar, SideButton } from '@vasakgroup/vue-libvasak';
 import { onMounted, onUnmounted, ref } from 'vue';
-import SelectField from '@/components/SelectField.vue';
 import ThemeIcon from '@/components/ThemeIcon.vue';
 import WindowAppLayout from '@/layouts/WindowAppLayout.vue';
 import { esEnVivo, INTERVALO_POR_OMISION, INTERVALOS, intervaloValido } from '@/tools/sondeo';
@@ -55,7 +54,11 @@ onUnmounted(() => soltarConfig?.());
 
 <template>
 	<WindowAppLayout>
-		<div class="flex h-full min-h-0 w-full">
+		<!-- `gap-1 p-1` como en Configuración y en la tienda: la barra es una
+		     tarjeta con borde y esquina redondeada, y pegada al borde de la ventana
+		     se le come el redondeo. Antes no hacía falta porque era un `<nav>` con
+		     un borde derecho, que sí quería llegar hasta el filo. -->
+		<div class="flex h-full min-h-0 w-full gap-1 p-1">
 			<!-- La barra es la de `@vasakgroup/vue-libvasak`, que es la de
 			     Configuración: acá había una escrita a mano que se parecía pero no
 			     era, y que no se podía plegar —sólo se angostaba sola por debajo de
@@ -82,7 +85,7 @@ onUnmounted(() => soltarConfig?.());
 
 					<!-- El intervalo, al pie. Plegada no entra ni la etiqueta ni el
 					     desplegable, así que se esconde. -->
-					<div v-if="!collapsed" class="flex flex-col gap-1 pt-3">
+					<div v-if="!collapsed" class="mt-auto flex flex-col gap-1 pt-3">
 						<label class="text-tx-muted text-xs">{{ t('ajustes.intervalo') }}</label>
 						<SelectField v-model.number="intervalo">
 							<option v-for="i in INTERVALOS" :key="i" :value="i">{{ i / 1000 }} s</option>
