@@ -97,13 +97,16 @@ describe('cambiar de pantalla', () => {
 	});
 
 	test('y la que está se marca, para quien no ve el color', async () => {
+		// Sobre el botón dibujado y no sobre su propiedad: un borde distinto no
+		// lo anuncia un lector de pantalla, y comprobar `active` pasaría igual el
+		// día que el botón dejara de traducirlo a `aria-current`.
 		const vista = await abrirElMonitor();
 
 		await botonDe(vista, 'limpieza')?.trigger('click');
 		await nextTick();
 
-		expect(botonDe(vista, 'limpieza')?.props('active')).toBe(true);
-		expect(botonDe(vista, 'recursos')?.props('active')).toBe(false);
+		expect(botonDe(vista, 'limpieza')?.get('button').attributes('aria-current')).toBe('page');
+		expect(botonDe(vista, 'recursos')?.get('button').attributes('aria-current')).toBeUndefined();
 	});
 
 	test('las cinco llevan a algún lado', async () => {
