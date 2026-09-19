@@ -20,6 +20,9 @@ inicio:
   descripcion: Esta es la plantilla. Reemplazá esta pantalla por la tuya.
   # `t()` no interpola: el marcador se reemplaza a mano. Ver el README.
   saludo: "Hola, {0}"
+barraLateral:
+  plegar: Plegar la barra lateral
+  desplegar: Desplegar la barra lateral
 pantallas:
   recursos: Recursos
   aplicaciones: Aplicaciones

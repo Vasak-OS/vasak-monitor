@@ -10,6 +10,9 @@ inicio:
   titulo: Hello, VasakOS
   descripcion: This is the template. Replace this screen with your own.
   saludo: "Hello, {0}"
+barraLateral:
+  plegar: Collapse the sidebar
+  desplegar: Expand the sidebar
 pantallas:
   recursos: Resources
   aplicaciones: Applications
