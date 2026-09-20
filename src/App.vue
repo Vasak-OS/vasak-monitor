@@ -90,7 +90,11 @@ onUnmounted(() => soltarConfig?.());
 						     suelta acá al lado no estaba asociada a nada, así que un lector
 						     de pantalla anunciaba un desplegable sin nombre y hacer clic en
 						     el texto no abría la lista. -->
-						<SelectField v-model.number="intervalo" :label="t('ajustes.intervalo')">
+						<!-- Sin `.number`: las opciones atan el número con `:value="i"`, no
+						     una cadena, así que lo que vuelve ya es un número y el
+						     modificador no convierte nada. Lo pedía cuando el `value` era
+						     texto. -->
+						<SelectField v-model="intervalo" :label="t('ajustes.intervalo')">
 							<option v-for="i in INTERVALOS" :key="i" :value="i">{{ i / 1000 }} s</option>
 						</SelectField>
 						<!-- Se dice que la medición se pausa: sin eso, alguien que abre el
