@@ -27,7 +27,12 @@ afterEach(() => {
 
 describe('elegir un intervalo', () => {
 	test('devuelve un número, no la cadena del `value`', async () => {
-		const elegido = ref<number>(INTERVALOS[0]);
+		// Se anota como `string | number` a propósito: es lo que el componente
+		// puede devolver, y lo que la prueba comprueba es que lo que llega sea
+		// un número. Anotarlo como `number` sería afirmar de antemano lo que se
+		// quiere averiguar —y además `h()` ensancha el genérico del componente,
+		// así que el tipo del manejador tiene que aceptar las dos cosas—.
+		const elegido = ref<string | number>(INTERVALOS[0]);
 		// Se monta el mismo armado que usa la ventana: el desplegable compartido
 		// con las opciones atando el número.
 		vista = mount({
@@ -37,7 +42,7 @@ describe('elegir un intervalo', () => {
 						SelectField,
 						{
 							modelValue: elegido.value,
-							'onUpdate:modelValue': (valor: number) => {
+							'onUpdate:modelValue': (valor: string | number) => {
 								elegido.value = valor;
 							},
 						},
