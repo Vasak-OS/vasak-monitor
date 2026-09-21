@@ -25,8 +25,7 @@
  * el hijo ocupa el ancho completo y maneja su propio acomodo.
  */
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
-import { WindowFrame } from '@vasakgroup/vue-libvasak';
-import ThemeIcon from '@/components/ThemeIcon.vue';
+import { ThemeIcon, WindowFrame } from '@vasakgroup/vue-libvasak';
 
 const { t } = useI18n();
 </script>
@@ -37,7 +36,7 @@ const { t } = useI18n();
     :maximize-label="t('ventana.maximizar')"
     :close-label="t('ventana.cerrar')">
     <template #identidad>
-      <ThemeIcon nombre="utilities-system-monitor" :tamano="24" :alt="t('app.titulo')" />
+      <ThemeIcon name="utilities-system-monitor" :size="24" :alt="t('app.titulo')" />
     </template>
 
     <template #centro>

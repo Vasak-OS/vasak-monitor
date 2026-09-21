@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { invoke } from '@tauri-apps/api/core';
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
+import { AlertMessage, LoadingState, ThemeIcon } from '@vasakgroup/vue-libvasak';
 import { computed, onMounted, ref } from 'vue';
-import ThemeIcon from '@/components/ThemeIcon.vue';
 import { interpolar } from '@/tools/interpolar';
 
 interface Servicio {
@@ -74,7 +74,7 @@ onMounted(cargar);
 				{{ t('servicios.soloVasakOS') }}
 			</label>
 			<span v-if="fallidos > 0" class="flex items-center gap-1.5 text-sm text-status-error">
-				<ThemeIcon nombre="dialog-error" :tamano="16" />
+				<ThemeIcon name="dialog-error" :size="16" />
 				{{ interpolar(t('servicios.fallidos'), fallidos) }}
 			</span>
 			<button
@@ -82,21 +82,21 @@ onMounted(cargar);
 				class="ml-auto flex items-center gap-1.5 rounded-corner border border-ui-border px-3 py-1.5 text-sm text-tx-main hover:bg-ui-surface"
 				@click="cargar()"
 			>
-				<ThemeIcon nombre="view-refresh" :tamano="14" />
+				<ThemeIcon name="view-refresh" :size="14" />
 				{{ t('common.actualizar') }}
 			</button>
 		</header>
 
-		<p v-if="error" class="rounded-corner bg-status-error/10 px-3 py-2 text-sm text-status-error">
+		<AlertMessage v-if="error" tone="error" icon="dialog-error">
 			{{ error }}
-		</p>
-		<p v-if="cargando" class="text-sm text-tx-muted">{{ t('common.cargando') }}</p>
+		</AlertMessage>
+		<LoadingState v-if="cargando" :label="t('common.cargando')" />
 
 		<ul v-else class="divide-y divide-ui-border overflow-hidden rounded-corner border border-ui-border">
 			<li v-for="s in visibles" :key="s.unidad" class="flex flex-wrap items-center gap-3 bg-ui-surface/70 px-4 py-2.5">
 				<div class="min-w-0 flex-1">
 					<div class="flex items-center gap-2">
-						<ThemeIcon nombre="system-run" :tamano="16" />
+						<ThemeIcon name="system-run" :size="16" />
 						<span class="truncate text-sm text-tx-main">{{ s.unidad }}</span>
 						<span :class="tonoDeEstado(s)" class="shrink-0 font-mono text-xs">{{ s.estado }}</span>
 						<!-- Se dice de qué instancia es: los del sistema piden

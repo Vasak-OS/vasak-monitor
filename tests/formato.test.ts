@@ -43,9 +43,9 @@ describe('tonoDeCarga', () => {
 	test('los cortes son 75 y 90', () => {
 		expect(tonoDeCarga(0)).toBe('normal');
 		expect(tonoDeCarga(74.9)).toBe('normal');
-		expect(tonoDeCarga(75)).toBe('atencion');
-		expect(tonoDeCarga(89.9)).toBe('atencion');
-		expect(tonoDeCarga(90)).toBe('critico');
-		expect(tonoDeCarga(100)).toBe('critico');
+		expect(tonoDeCarga(75)).toBe('warning');
+		expect(tonoDeCarga(89.9)).toBe('warning');
+		expect(tonoDeCarga(90)).toBe('critical');
+		expect(tonoDeCarga(100)).toBe('critical');
 	});
 });

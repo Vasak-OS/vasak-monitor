@@ -12,10 +12,15 @@
  */
 
 import { afterEach, describe, expect, test } from 'bun:test';
-import { AppBar, WindowControls, WindowFrame } from '@vasakgroup/vue-libvasak';
+import {
+	AppBar,
+	olvidarLosIconosDelTema,
+	ThemeIcon,
+	WindowControls,
+	WindowFrame,
+} from '@vasakgroup/vue-libvasak';
 import { mount, type VueWrapper } from '@vue/test-utils';
 import { h } from 'vue';
-import ThemeIcon from '@/components/ThemeIcon.vue';
 import WindowAppLayout from '@/layouts/WindowAppLayout.vue';
 
 let vista: VueWrapper | null = null;
@@ -49,6 +54,10 @@ afterEach(() => {
 	for (const suelto of sueltos.splice(0)) suelto.unmount();
 	vista?.unmount();
 	vista = null;
+	// Lo que el tema resolvió se memoriza en el módulo de la librería, y un
+	// módulo se comparte entre archivos de prueba: sin vaciarlo, el primero que
+	// pida un icono con el tema sin preparar deja guardado que no hay ninguno.
+	olvidarLosIconosDelTema();
 });
 
 describe('la ventana', () => {
@@ -76,7 +85,7 @@ describe('lo que va en la barra', () => {
 		// un costado: `identidad` es la única zona que no scrollea.
 		const dentro = ranura(abrir(), 'identidad');
 
-		expect(dentro?.findComponent(ThemeIcon).props('nombre')).toBe('utilities-system-monitor');
+		expect(dentro?.findComponent(ThemeIcon).props('name')).toBe('utilities-system-monitor');
 	});
 
 	test('el título va en `centro`, al medio de la ventana entera', () => {

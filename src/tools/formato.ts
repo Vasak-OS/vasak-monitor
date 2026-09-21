@@ -36,8 +36,16 @@ export function porcentaje(valor: number | null): string {
 }
 
 /** El color de una barra según lo llena que esté. */
-export function tonoDeCarga(porciento: number): 'normal' | 'atencion' | 'critico' {
-	if (porciento >= 90) return 'critico';
-	if (porciento >= 75) return 'atencion';
+/**
+ * Cuán cargado está algo, en las palabras de la librería.
+ *
+ * Los nombres son los de `ProgressBar` —`warning`, `critical`— y no unos
+ * propios, porque lo que sale de acá va justo a esa propiedad. Traducir dos
+ * vocabularios en el medio sería una tabla más que mantener y un lugar más
+ * donde equivocarse.
+ */
+export function tonoDeCarga(porciento: number): 'normal' | 'warning' | 'critical' {
+	if (porciento >= 90) return 'critical';
+	if (porciento >= 75) return 'warning';
 	return 'normal';
 }

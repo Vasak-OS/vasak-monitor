@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { invoke } from '@tauri-apps/api/core';
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
+import { AlertMessage, SearchField, ThemeIcon } from '@vasakgroup/vue-libvasak';
 import { computed, ref } from 'vue';
-import ThemeIcon from '@/components/ThemeIcon.vue';
 import { useSondeo } from '@/composables/useSondeo';
 import { tamano } from '@/tools/formato';
 import { interpolar } from '@/tools/interpolar';
@@ -62,23 +62,26 @@ async function cerrar(a: Aplicacion) {
 		<!-- `flex-wrap` y anchos mínimos: en una ventana angosta el buscador y el
 		     contador se apilan en lugar de comprimirse hasta ser ilegibles. -->
 		<header class="flex flex-wrap items-center gap-2">
-			<input
+			<!-- El campo del sistema: trae la lupa, la cruz para vaciarlo y —lo
+			     que no tenía— un nombre. El `placeholder` no es un nombre: se
+			     va en cuanto se escribe la primera letra, y un lector de
+			     pantalla no tiene obligación de leerlo. -->
+			<SearchField
 				v-model="filtro"
-				type="search"
+				class="min-w-40 flex-1"
 				:placeholder="t('aplicaciones.buscar')"
-				class="min-w-40 flex-1 rounded-corner border border-ui-border bg-ui-surface/70 px-3 py-1.5 text-sm text-tx-main"
-			/>
+				:label="t('aplicaciones.buscar')" />
 			<span class="shrink-0 text-tx-muted text-xs">
 				{{ interpolar(t('aplicaciones.cuantas'), conVentana.length) }}
 			</span>
 		</header>
 
-		<p v-if="error" class="rounded-corner bg-status-error/10 px-3 py-2 text-sm text-status-error">
+		<AlertMessage v-if="error" tone="error" icon="dialog-error">
 			{{ error }}
-		</p>
+		</AlertMessage>
 
 		<h2 class="flex items-center gap-2 font-medium text-sm text-tx-main">
-			<ThemeIcon nombre="applications-other" :tamano="16" />
+			<ThemeIcon name="applications-other" :size="16" />
 			{{ t('aplicaciones.conVentana') }}
 		</h2>
 		<p class="text-tx-muted text-xs">{{ t('aplicaciones.agrupadas') }}</p>
@@ -89,7 +92,7 @@ async function cerrar(a: Aplicacion) {
 				:key="a.pid"
 				class="flex flex-wrap items-center gap-x-3 gap-y-1 bg-ui-surface/70 px-3 py-2.5 sm:px-4"
 			>
-				<ThemeIcon :nombre="a.nombre" :tamano="20" />
+				<ThemeIcon :name="a.nombre" :size="20" />
 				<!-- `basis-0` con `min-w-32`: el nombre se lleva el espacio que sobra
 				     pero no empuja el tamaño y el botón fuera de la ventana. -->
 				<span class="min-w-32 flex-1 basis-0 truncate text-sm text-tx-main">{{ a.nombre }}</span>
@@ -117,7 +120,7 @@ async function cerrar(a: Aplicacion) {
 			class="flex items-center gap-2 self-start rounded-corner border border-ui-border px-3 py-1.5 text-sm text-tx-main hover:bg-ui-surface"
 			@click="mostrarSinVentana = !mostrarSinVentana"
 		>
-			<ThemeIcon :nombre="mostrarSinVentana ? 'go-up' : 'go-down'" :tamano="14" />
+			<ThemeIcon :name="mostrarSinVentana ? 'go-up' : 'go-down'" :size="14" />
 			{{
 				interpolar(
 					mostrarSinVentana ? t('aplicaciones.ocultarFondo') : t('aplicaciones.verFondo'),
