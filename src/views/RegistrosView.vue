@@ -1,9 +1,14 @@
 <script setup lang="ts">
 import { invoke } from '@tauri-apps/api/core';
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
-import { SelectField } from '@vasakgroup/vue-libvasak';
+import {
+	AlertMessage,
+	LoadingState,
+	SearchField,
+	SelectField,
+	ThemeIcon,
+} from '@vasakgroup/vue-libvasak';
 import { computed, onMounted, ref } from 'vue';
-import ThemeIcon from '@/components/ThemeIcon.vue';
 import { interpolar } from '@/tools/interpolar';
 import {
 	type AppDelDiario,
@@ -102,7 +107,7 @@ onMounted(() => {
 		     de los controles filtran dentro de eso. -->
 		<header class="flex flex-wrap items-center gap-2 sm:gap-3">
 			<label class="flex min-w-0 items-center gap-2 text-sm text-tx-main">
-				<ThemeIcon :nombre="iconoElegido" :tamano="18" :alt="t('registros.deQuien')" />
+				<ThemeIcon :name="iconoElegido" :size="18" :alt="t('registros.deQuien')" />
 				<span class="sr-only">{{ t('registros.deQuien') }}</span>
 				<SelectField v-model="app" class="max-w-56" @change="cargar()">
 					<option :value="ECOSISTEMA">{{ t('registros.todoElEcosistema') }}</option>
@@ -118,27 +123,26 @@ onMounted(() => {
 				{{ t('registros.soloProblemas') }}
 			</label>
 
-			<input
+			<SearchField
 				v-model="filtro"
-				type="search"
+				class="min-w-40 flex-1"
 				:placeholder="t('registros.buscar')"
-				class="min-w-40 flex-1 rounded-corner border border-ui-border bg-ui-surface/70 px-3 py-1.5 text-sm text-tx-main"
-			/>
+				:label="t('registros.buscar')" />
 
 			<button
 				type="button"
 				class="flex items-center gap-2 rounded-corner border border-ui-border px-3 py-1.5 text-sm text-tx-main hover:bg-ui-surface"
 				@click="cargar()"
 			>
-				<ThemeIcon nombre="view-refresh" :tamano="16" alt="" />
+				<ThemeIcon name="view-refresh" :size="16" alt="" />
 				{{ t('common.actualizar') }}
 			</button>
 		</header>
 
-		<p v-if="error" class="rounded-corner bg-status-error/10 px-3 py-2 text-sm text-status-error">
+		<AlertMessage v-if="error" tone="error" icon="dialog-error">
 			{{ error }}
-		</p>
-		<p v-if="cargando" class="text-sm text-tx-muted">{{ t('common.cargando') }}</p>
+		</AlertMessage>
+		<LoadingState v-if="cargando" :label="t('common.cargando')" />
 
 		<template v-else>
 			<div
@@ -146,7 +150,7 @@ onMounted(() => {
 				class="flex flex-col gap-2 rounded-corner border border-ui-border bg-ui-surface/70 px-4 py-4"
 			>
 				<p class="flex items-center gap-2 text-sm text-tx-main">
-					<ThemeIcon nombre="dialog-information" :tamano="18" alt="" />
+					<ThemeIcon name="dialog-information" :size="18" alt="" />
 					{{ t('registros.nadaQueMostrar') }}
 				</p>
 				<p class="text-tx-muted text-xs">{{ t('registros.dondeEscriben') }}</p>
@@ -154,7 +158,7 @@ onMounted(() => {
 
 			<template v-else>
 				<p class="flex items-center gap-2 text-tx-muted text-xs">
-					<ThemeIcon nombre="text-x-generic" :tamano="14" alt="" />
+					<ThemeIcon name="text-x-generic" :size="14" alt="" />
 					{{ interpolar(t('registros.cuantas'), visibles.length) }}
 				</p>
 				<ul

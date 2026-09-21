@@ -56,7 +56,7 @@ describe('nombres de componentes', () => {
 	test('la cuenta de palabras distingue los casos que importan', () => {
 		expect(palabras('ThemeIcon.vue')).toBe(2);
 		expect(palabras('SelectField.vue')).toBe(2);
-		expect(palabras('BarraDeCarga.vue')).toBe(3);
+		expect(palabras('GraficoDeUso.vue')).toBe(3);
 		expect(palabras('Icono.vue')).toBe(1);
 		expect(palabras('Selector.vue')).toBe(1);
 		// Las siglas no se parten en una letra por palabra.

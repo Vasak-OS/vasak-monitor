@@ -1,10 +1,9 @@
 <script setup lang="ts">
 import { invoke } from '@tauri-apps/api/core';
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
+import { AlertMessage, LoadingState, ProgressBar, ThemeIcon } from '@vasakgroup/vue-libvasak';
 import { ref } from 'vue';
-import BarraDeCarga from '@/components/BarraDeCarga.vue';
 import GraficoDeUso from '@/components/GraficoDeUso.vue';
-import ThemeIcon from '@/components/ThemeIcon.vue';
 import { useSondeo } from '@/composables/useSondeo';
 import { caudal, porcentaje, tamano, tonoDeCarga } from '@/tools/formato';
 import { agregar } from '@/tools/historial';
@@ -84,22 +83,25 @@ useSondeo(
 
 <template>
 	<section class="flex flex-col gap-4">
-		<p v-if="error" class="rounded-corner bg-status-error/10 px-3 py-2 text-sm text-status-error">
+		<AlertMessage v-if="error" tone="error" icon="dialog-error">
 			{{ error }}
-		</p>
-		<p v-if="!datos" class="text-sm text-tx-muted">{{ t('common.midiendo') }}</p>
+		</AlertMessage>
+		<LoadingState v-if="!datos" :label="t('common.midiendo')" />
 
 		<template v-else>
 			<div class="grid gap-3 @lg:grid-cols-2">
 				<article class="flex flex-col gap-2 rounded-corner border border-ui-border bg-ui-surface/70 p-4">
 					<header class="flex flex-wrap items-baseline justify-between gap-x-3">
 						<h2 class="flex items-center gap-2 font-medium text-tx-main">
-							<ThemeIcon nombre="cpu" :tamano="18" />
+							<ThemeIcon name="cpu" :size="18" />
 							{{ t('recursos.cpu') }}
 						</h2>
 						<span class="font-mono text-lg text-tx-main">{{ porcentaje(datos.cpu) }}</span>
 					</header>
-					<BarraDeCarga :porciento="datos.cpu ?? 0" />
+					<ProgressBar
+						:value="datos.cpu ?? 0"
+						:label="t('recursos.cpu')"
+						:tone="tonoDeCarga(datos.cpu ?? 0)" />
 					<GraficoDeUso
 						:serie="serieCpu"
 						:techo="100"
@@ -116,12 +118,15 @@ useSondeo(
 				<article class="flex flex-col gap-2 rounded-corner border border-ui-border bg-ui-surface/70 p-4">
 					<header class="flex flex-wrap items-baseline justify-between gap-x-3">
 						<h2 class="flex items-center gap-2 font-medium text-tx-main">
-							<ThemeIcon nombre="memory" :tamano="18" />
+							<ThemeIcon name="memory" :size="18" />
 							{{ t('recursos.memoria') }}
 						</h2>
 						<span class="font-mono text-lg text-tx-main">{{ porcentaje(usoDeRam(datos)) }}</span>
 					</header>
-					<BarraDeCarga :porciento="usoDeRam(datos)" />
+					<ProgressBar
+						:value="usoDeRam(datos)"
+						:label="t('recursos.memoria')"
+						:tone="tonoDeCarga(usoDeRam(datos))" />
 					<GraficoDeUso
 						:serie="serieRam"
 						:techo="100"
@@ -146,12 +151,15 @@ useSondeo(
 				>
 					<header class="flex flex-wrap items-baseline justify-between gap-x-3">
 						<h2 class="flex items-center gap-2 font-medium text-tx-main">
-							<ThemeIcon nombre="drive-harddisk" :tamano="18" />
+							<ThemeIcon name="drive-harddisk" :size="18" />
 							{{ t('recursos.swap') }}
 						</h2>
 						<span class="font-mono text-lg text-tx-main">{{ porcentaje(datos.swap) }}</span>
 					</header>
-					<BarraDeCarga :porciento="datos.swap" />
+					<ProgressBar
+						:value="datos.swap"
+						:label="t('recursos.swap')"
+						:tone="tonoDeCarga(datos.swap)" />
 					<GraficoDeUso
 						:serie="serieSwap"
 						:techo="100"
@@ -165,7 +173,7 @@ useSondeo(
 
 				<article class="flex flex-col gap-2 rounded-corner border border-ui-border bg-ui-surface/70 p-4">
 					<h2 class="flex items-center gap-2 font-medium text-tx-main">
-							<ThemeIcon nombre="network-wired" :tamano="18" />
+							<ThemeIcon name="network-wired" :size="18" />
 							{{ t('recursos.red') }}
 						</h2>
 					<div class="flex gap-6 font-mono text-sm">
@@ -193,7 +201,7 @@ useSondeo(
 
 			<article class="flex flex-col gap-3 rounded-corner border border-ui-border bg-ui-surface/70 p-4">
 				<h2 class="flex items-center gap-2 font-medium text-tx-main">
-							<ThemeIcon nombre="drive-multidisk" :tamano="18" />
+							<ThemeIcon name="drive-multidisk" :size="18" />
 							{{ t('recursos.discos') }}
 						</h2>
 				<div v-for="d in datos.discos" :key="d.punto" class="flex flex-col gap-1">
@@ -203,7 +211,10 @@ useSondeo(
 							{{ interpolar(t('recursos.deTotal'), tamano(d.usado), tamano(d.total)) }}
 						</span>
 					</div>
-					<BarraDeCarga :porciento="usoDeDisco(d)" />
+					<ProgressBar
+						:value="usoDeDisco(d)"
+						:label="d.punto"
+						:tone="tonoDeCarga(usoDeDisco(d))" />
 				</div>
 			</article>
 		</template>

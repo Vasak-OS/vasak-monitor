@@ -3,9 +3,8 @@ import type { UnlistenFn } from '@tauri-apps/api/event';
 import { listen } from '@tauri-apps/api/event';
 import { useConfigStore } from '@vasakgroup/plugin-config-manager';
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
-import { SelectField, SideBar, SideButton } from '@vasakgroup/vue-libvasak';
+import { SelectField, SideBar, SideButton, ThemeIcon } from '@vasakgroup/vue-libvasak';
 import { onMounted, onUnmounted, ref } from 'vue';
-import ThemeIcon from '@/components/ThemeIcon.vue';
 import WindowAppLayout from '@/layouts/WindowAppLayout.vue';
 import { esEnVivo, INTERVALO_POR_OMISION, INTERVALOS, intervaloValido } from '@/tools/sondeo';
 import AplicacionesView from '@/views/AplicacionesView.vue';
@@ -110,7 +109,7 @@ onUnmounted(() => soltarConfig?.());
 			     espacio real. -->
 			<main class="@container min-h-0 flex-1 overflow-y-auto p-3 sm:p-4">
 				<h1 class="mb-4 flex items-center gap-2 font-medium text-tx-main text-xl">
-					<ThemeIcon :nombre="ICONOS[pantalla]" :tamano="22" />
+					<ThemeIcon :name="ICONOS[pantalla]" :size="22" />
 					{{ t(`pantallas.${pantalla}`) }}
 				</h1>
 				<RecursosView

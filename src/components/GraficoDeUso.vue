@@ -23,7 +23,7 @@ const props = defineProps<{
 	/** Para el `aria-label`, porque un SVG no dice nada por sí solo. */
 	etiqueta: string;
 	/** El tono, que sigue al de las barras para que el color signifique lo mismo. */
-	tono?: 'normal' | 'atencion' | 'critico';
+	tono?: 'normal' | 'warning' | 'critical';
 }>();
 
 const ANCHO = 300;
@@ -47,9 +47,9 @@ const tramos = computed(() => tramosDe(props.serie, techoReal.value, ANCHO, ALTO
 const hayGrafico = computed(() => tramos.value.length > 0);
 
 const color = computed(() =>
-	props.tono === 'critico'
+	props.tono === 'critical'
 		? 'text-status-error'
-		: props.tono === 'atencion'
+		: props.tono === 'warning'
 			? 'text-status-warning'
 			: 'text-primary'
 );

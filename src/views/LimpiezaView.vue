@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { invoke } from '@tauri-apps/api/core';
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
+import { AlertMessage, LoadingState, ThemeIcon } from '@vasakgroup/vue-libvasak';
 import { computed, onMounted, ref } from 'vue';
 import ProyectosLimpiables from '@/components/ProyectosLimpiables.vue';
-import ThemeIcon from '@/components/ThemeIcon.vue';
 import { tamano } from '@/tools/formato';
 import { errorTrasLimpiarGrupo, hayLimpiezaEnCurso } from '@/tools/limpieza';
 
@@ -118,18 +118,18 @@ onMounted(cargar);
 
 <template>
 	<section class="flex flex-col gap-4">
-		<p v-if="error" class="rounded-corner bg-status-error/10 px-3 py-2 text-sm text-status-error">
+		<AlertMessage v-if="error" tone="error" icon="dialog-error">
 			{{ error }}
-		</p>
+		</AlertMessage>
 		<p v-if="aviso" class="rounded-corner bg-status-success/10 px-3 py-2 text-sm text-status-success">
 			{{ aviso }}
 		</p>
-		<p v-if="cargando" class="text-sm text-tx-muted">{{ t('limpieza.midiendo') }}</p>
+		<LoadingState v-if="cargando" :label="t('limpieza.midiendo')" />
 
 		<template v-else>
 			<article class="rounded-corner border border-ui-border bg-ui-surface/70 p-4">
 				<p class="flex items-center gap-2 text-tx-muted text-xs">
-					<ThemeIcon nombre="drive-harddisk" :tamano="14" />
+					<ThemeIcon name="drive-harddisk" :size="14" />
 					{{ t('limpieza.totalEtiqueta') }}
 				</p>
 				<p class="font-mono text-2xl text-tx-main">{{ tamano(totalEnDisco) }}</p>
@@ -138,7 +138,7 @@ onMounted(cargar);
 			<div class="flex flex-col gap-2">
 				<div class="flex flex-wrap items-center gap-2">
 					<h2 class="flex items-center gap-2 font-medium text-tx-main">
-						<ThemeIcon nombre="drive-harddisk" :tamano="18" />
+						<ThemeIcon name="drive-harddisk" :size="18" />
 						{{ t('limpieza.enDisco') }}
 					</h2>
 					<button
@@ -147,7 +147,7 @@ onMounted(cargar);
 						class="ml-auto flex items-center gap-1.5 rounded-corner border border-primary/30 bg-primary/10 px-3 py-1.5 font-medium text-primary text-sm hover:bg-primary/15 disabled:opacity-50"
 						@click="limpiarGrupo(deDisco.map((r) => r.tarea))"
 					>
-						<ThemeIcon nombre="edit-clear-all" :tamano="14" />
+						<ThemeIcon name="edit-clear-all" :size="14" />
 						{{ t('limpieza.limpiarTodo') }}
 					</button>
 				</div>
@@ -157,7 +157,7 @@ onMounted(cargar);
 						:key="r.tarea"
 						class="flex flex-wrap items-center gap-x-3 gap-y-1 bg-ui-surface/70 px-3 py-3 sm:px-4"
 					>
-						<ThemeIcon :nombre="ICONOS[r.tarea]" :tamano="20" />
+						<ThemeIcon :name="ICONOS[r.tarea]" :size="20" />
 						<div class="min-w-40 flex-1 basis-0">
 							<p class="text-sm text-tx-main">{{ t(`limpieza.tareas.${r.tarea}.titulo`) }}</p>
 							<p class="text-tx-muted text-xs">{{ t(`limpieza.tareas.${r.tarea}.detalle`) }}</p>
@@ -178,7 +178,7 @@ onMounted(cargar);
 			<div class="flex flex-col gap-2">
 				<div class="flex flex-wrap items-center gap-2">
 					<h2 class="flex items-center gap-2 font-medium text-tx-main">
-						<ThemeIcon nombre="applications-system" :tamano="18" />
+						<ThemeIcon name="applications-system" :size="18" />
 						{{ t('limpieza.enMemoria') }}
 					</h2>
 					<button
@@ -187,7 +187,7 @@ onMounted(cargar);
 						class="ml-auto flex items-center gap-1.5 rounded-corner border border-ui-border px-3 py-1.5 text-sm text-tx-main hover:bg-ui-surface disabled:opacity-50"
 						@click="limpiarGrupo(deMemoria.map((r) => r.tarea))"
 					>
-						<ThemeIcon nombre="edit-clear-all" :tamano="14" />
+						<ThemeIcon name="edit-clear-all" :size="14" />
 						{{ t('limpieza.limpiarTodo') }}
 					</button>
 				</div>
@@ -203,7 +203,7 @@ onMounted(cargar);
 						:key="r.tarea"
 						class="flex flex-wrap items-center gap-x-3 gap-y-1 bg-ui-surface/70 px-3 py-3 sm:px-4"
 					>
-						<ThemeIcon :nombre="ICONOS[r.tarea]" :tamano="20" />
+						<ThemeIcon :name="ICONOS[r.tarea]" :size="20" />
 						<div class="min-w-40 flex-1 basis-0">
 							<p class="text-sm text-tx-main">{{ t(`limpieza.tareas.${r.tarea}.titulo`) }}</p>
 							<p class="text-tx-muted text-xs">{{ t(`limpieza.tareas.${r.tarea}.detalle`) }}</p>

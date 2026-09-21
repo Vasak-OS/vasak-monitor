@@ -17,8 +17,8 @@
  */
 import { invoke } from '@tauri-apps/api/core';
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
+import { AlertMessage, ThemeIcon } from '@vasakgroup/vue-libvasak';
 import { computed, ref } from 'vue';
-import ThemeIcon from '@/components/ThemeIcon.vue';
 import { tamano } from '@/tools/formato';
 import { interpolar } from '@/tools/interpolar';
 
@@ -194,7 +194,7 @@ async function borrarElegidas() {
 	<article class="flex flex-col gap-3 rounded-corner border border-ui-border bg-ui-surface/70 p-4">
 		<header class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
 			<h2 class="flex items-center gap-2 font-medium text-tx-main">
-				<ThemeIcon nombre="applications-development" :tamano="18" />
+				<ThemeIcon name="applications-development" :size="18" />
 				{{ t('limpieza.proyectos.titulo') }}
 			</h2>
 			<span v-if="lista.length" class="font-mono text-lg text-tx-main">
@@ -207,13 +207,12 @@ async function borrarElegidas() {
 		     una carpeta que alguien esperaba ver no aparece en la lista. -->
 		<p class="text-tx-muted text-xs">{{ t('limpieza.proyectos.seguridad') }}</p>
 
-		<p
-			v-if="error"
-			class="whitespace-pre-line rounded-corner bg-status-error/10 px-3 py-2 text-sm text-status-error"
-		>
+		<!-- `whitespace-pre-line` porque el error del backend viene con saltos:
+		     es la lista de rutas que no se pudieron borrar, una por línea. -->
+		<AlertMessage v-if="error" tone="error" icon="dialog-error" class="whitespace-pre-line">
 			{{ error }}
-		</p>
-		<p v-if="aviso" class="text-sm text-status-success">{{ aviso }}</p>
+		</AlertMessage>
+		<AlertMessage v-if="aviso" tone="success" icon="object-select">{{ aviso }}</AlertMessage>
 
 		<div class="flex flex-wrap items-center gap-2">
 			<button
@@ -254,7 +253,13 @@ async function borrarElegidas() {
 			</template>
 		</div>
 
-		<p v-if="yaBusco && !lista.length && !buscando" class="text-sm text-tx-muted">
+		<!-- `role="status"` y no un estado vacío entero: es la respuesta a un
+		     botón que se acaba de apretar, no la pantalla. Sin el rol, buscar y
+		     no encontrar nada es indistinguible de que no haya pasado nada. -->
+		<p
+			v-if="yaBusco && !lista.length && !buscando"
+			role="status"
+			class="text-sm text-tx-muted">
 			{{ t('limpieza.proyectos.vacio') }}
 		</p>
 
@@ -268,7 +273,7 @@ async function borrarElegidas() {
 					:disabled="ocupada"
 					@change="alternar(h.ruta)"
 				/>
-				<ThemeIcon :nombre="ICONOS[h.clase]" :tamano="20" class="shrink-0" />
+				<ThemeIcon :name="ICONOS[h.clase]" :size="20" class="shrink-0" />
 				<label :for="`proy-${h.ruta}`" class="flex min-w-0 flex-col">
 					<span class="truncate text-sm text-tx-main">{{ h.proyecto }}</span>
 					<!-- La ruta completa en chico: el nombre del proyecto solo no alcanza
