@@ -24,10 +24,6 @@ export function responderInvoke(comando: string, valor: unknown) {
 	respuestas.set(comando, valor);
 }
 
-export function olvidarLasRespuestas() {
-	respuestas.clear();
-}
-
 export async function invoke(comando: string) {
 	invocaciones.push(comando);
 	const respuesta = respuestas.get(comando);
@@ -73,4 +69,10 @@ export function olvidarTodo() {
 	invocaciones.length = 0;
 	iconos.clear();
 	oyentes.clear();
+	// Las respuestas entran acá y no en un reinicio propio: `olvidarTodo` es el
+	// que llaman los demás archivos de prueba, y dos funciones para lo mismo
+	// son una que alguien va a olvidarse de llamar. Una respuesta que sobrevive
+	// se la come el `invoke` de la prueba siguiente, que no registró ninguna.
+	// Lo marcó la revisión.
+	respuestas.clear();
 }

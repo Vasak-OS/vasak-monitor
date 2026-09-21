@@ -20,7 +20,7 @@ import { mount, type VueWrapper } from '@vue/test-utils';
 import { nextTick } from 'vue';
 import AplicacionesView from '@/views/AplicacionesView.vue';
 import RecursosView from '@/views/RecursosView.vue';
-import { olvidarLasRespuestas, responderInvoke } from './dobles';
+import { invoke, olvidarTodo, responderInvoke } from './dobles';
 
 const RAIZ = new URL('..', import.meta.url).pathname;
 
@@ -46,7 +46,7 @@ beforeAll(async () => {
 afterEach(() => {
 	for (const vista of vistas) vista.unmount();
 	vistas.clear();
-	olvidarLasRespuestas();
+	olvidarTodo();
 	olvidarLosIconosDelTema();
 });
 
@@ -160,5 +160,19 @@ describe('lo que el monitor ya no dibuja', () => {
 		}
 
 		expect(culpables).toEqual([]);
+	});
+});
+
+describe('el reinicio de los dobles', () => {
+	test('olvidarTodo borra también las respuestas registradas', async () => {
+		// Es la única que mira los dobles y no la aplicación, y está por una
+		// razón: una respuesta que sobrevive al reinicio se la come el `invoke`
+		// de otro archivo de prueba, que no registró ninguna y no tiene forma de
+		// saber de dónde salió. Falla en silencio y en otro lado. Lo marcó la
+		// revisión, sobre el reinicio que había quedado aparte.
+		responderInvoke('recursos', { cpu: 1 });
+		olvidarTodo();
+
+		expect(await invoke('recursos')).toBeUndefined();
 	});
 });
