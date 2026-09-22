@@ -40,6 +40,13 @@ export async function listen(nombre: string, manejador: (evento: { payload: unkn
 	};
 }
 
+/** Dispara un evento del backend y espera a que lo atiendan. */
+export async function emit(nombre: string, payload: unknown = null) {
+	for (const manejador of [...(oyentes.get(nombre) ?? [])]) {
+		await manejador({ payload });
+	}
+}
+
 export function ponerEnElTema(nombre: string, fuente: string) {
 	iconos.set(nombre, fuente);
 }
