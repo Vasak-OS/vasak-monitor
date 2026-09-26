@@ -34,7 +34,7 @@ describe('el búfer', () => {
 	test('nunca pasa de la capacidad', () => {
 		let s: (number | null)[] = [];
 		for (let i = 0; i < CAPACIDAD * 2; i++) s = agregar(s, i);
-		expect(s.length).toBe(CAPACIDAD);
+		expect(s).toHaveLength(CAPACIDAD);
 	});
 
 	test('devuelve un arreglo nuevo, no muta el anterior', () => {
@@ -75,8 +75,8 @@ describe('el máximo', () => {
 describe('los tramos', () => {
 	test('una serie sin huecos es un solo tramo', () => {
 		const t = tramosDe([0, 50, 100], 100, 200, 40);
-		expect(t.length).toBe(1);
-		expect(t[0].length).toBe(3);
+		expect(t).toHaveLength(1);
+		expect(t[0]).toHaveLength(3);
 	});
 
 	test('el valor más alto queda arriba y el más bajo abajo', () => {
@@ -95,9 +95,9 @@ describe('los tramos', () => {
 
 	test('un hueco parte la serie en dos tramos', () => {
 		const t = tramosDe([10, null, 30], 100, 200, 40);
-		expect(t.length).toBe(2);
-		expect(t[0].length).toBe(1);
-		expect(t[1].length).toBe(1);
+		expect(t).toHaveLength(2);
+		expect(t[0]).toHaveLength(1);
+		expect(t[1]).toHaveLength(1);
 	});
 
 	test('un valor por encima del techo se acota', () => {
