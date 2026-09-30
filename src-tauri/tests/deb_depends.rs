@@ -109,12 +109,13 @@ fn estan_las_bibliotecas_que_el_binario_enlaza() {
 
 /// Lo que no se enlaza pero se usa en ejecución: `systemctl` y `journalctl`
 /// (systemd) para los servicios y el diario, `pkexec` para lo del sistema,
-/// `du` y `date` (coreutils), `swapoff`/`swapon` (util-linux) para devolver el
-/// swap a la memoria y `ss` (iproute2) para saber qué procesos tienen ventana.
+/// `du` y `date` (coreutils), `swapoff`/`swapon` para devolver el swap a la
+/// memoria —en Debian vienen en `mount`, no en util-linux como en Arch— y `ss`
+/// (iproute2) para saber qué procesos tienen ventana.
 #[test]
 fn estan_los_programas_que_se_usan_sin_enlazarlos() {
     let depends = deb_depends();
-    for package in ["systemd", "pkexec", "coreutils", "util-linux", "iproute2"] {
+    for package in ["systemd", "pkexec", "coreutils", "mount", "iproute2"] {
         assert!(
             depends.iter().any(|n| n == package),
             "falta {package} en el .deb"
