@@ -42,20 +42,34 @@ const onlyProblems = ref(false);
 const filter = ref('');
 const app = ref<string>(ECOSISTEMA);
 
+/**
+ * El número del último pedido.
+ *
+ * El selector, la casilla y el botón llaman a `load()` cada uno, y dos pedidos
+ * pueden cruzarse: si el de antes contesta último, pisaría la lista con
+ * entradas de un filtro que ya no está elegido. Sólo el último escribe.
+ */
+let latestRequest = 0;
+
 async function load() {
+	const request = ++latestRequest;
 	loading.value = true;
 	try {
-		utcOffset.value = await invoke<number>('desplazamiento_horario');
-		entries.value = await invoke<LogEntry[]>('registros_de_vasakos', {
+		const offset = await invoke<number>('desplazamiento_horario');
+		const result = await invoke<LogEntry[]>('registros_de_vasakos', {
 			soloProblemas: onlyProblems.value,
 			cantidad: 500,
 			app: app.value,
 		});
+		if (request !== latestRequest) return;
+		utcOffset.value = offset;
+		entries.value = result;
 		error.value = '';
 	} catch (e) {
+		if (request !== latestRequest) return;
 		error.value = String(e);
 	} finally {
-		loading.value = false;
+		if (request === latestRequest) loading.value = false;
 	}
 }
 

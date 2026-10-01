@@ -266,6 +266,35 @@ describe('las piezas de la 2.2 (vue-libvasak#74)', () => {
 		expect(html).not.toMatch(/(?<![\w@-])sm:/);
 	});
 
+	test('una respuesta vieja de Registros no pisa a la nueva', async () => {
+		// El selector, la casilla y el botón piden cada uno; si el primer pedido
+		// contesta último, la lista quedaba con el filtro anterior (lo marcó la
+		// revisión). `invoke` devuelve la promesa registrada, así que acá se
+		// decide a mano en qué orden contestan.
+		responderInvoke('desplazamiento_horario', 0);
+		responderInvoke('apps_del_diario', []);
+		let answerFirst: (value: unknown) => void = () => {};
+		responderInvoke('registros_de_vasakos', new Promise((resolve) => (answerFirst = resolve)));
+		const wrapper = await mountView(LogsView);
+
+		responderInvoke('registros_de_vasakos', [
+			{ microsegundos: 0, origen: 'nuevo', nivel: 6, mensaje: 'la respuesta nueva' },
+		]);
+		await wrapper.findComponent(Checkbox).get('input').setValue(true);
+		for (let i = 0; i < 4; i++) {
+			await new Promise((done) => setTimeout(done, 0));
+			await nextTick();
+		}
+		answerFirst([{ microsegundos: 0, origen: 'viejo', nivel: 6, mensaje: 'la respuesta vieja' }]);
+		for (let i = 0; i < 4; i++) {
+			await new Promise((done) => setTimeout(done, 0));
+			await nextTick();
+		}
+
+		expect(wrapper.text()).toContain('la respuesta nueva');
+		expect(wrapper.text()).not.toContain('la respuesta vieja');
+	});
+
 	test('y cuando una app no tiene nada, lo explica con el estado vacío', async () => {
 		responderInvoke('desplazamiento_horario', 0);
 		responderInvoke('apps_del_diario', [{ id: 'vasak-mail', icono: 'vasak-mail', presente: false }]);
