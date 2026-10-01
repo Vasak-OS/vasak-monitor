@@ -29,6 +29,11 @@ pantallas:
   servicios: Servicios
   limpieza: Limpieza
   registros: Registros
+# En una ventana angosta va una pantalla por vez: la lista y, al elegir, la
+# pantalla con su botón para volver.
+navigation:
+  back: Volver a las pantallas
+  screens: Pantallas del monitor
 common:
   cargando: Cargando…
   midiendo: Midiendo…
