@@ -69,12 +69,13 @@ async function run(s: Service, action: ServiceAction) {
 	}
 }
 
-const stateTone = (s: Service) =>
-	s.estado === 'failed'
-		? 'text-status-error'
-		: s.estado === 'active'
-			? 'text-status-success'
-			: 'text-tx-muted';
+/**
+ * El estado va en una insignia con tono: el texto queda en `tx-main` sobre el
+ * velo del color, que es lo que sostiene 4,5:1 —el verde y el rojo del esquema
+ * como color de letra sobre la superficie no llegan—.
+ */
+const stateTone = (s: Service): 'error' | 'success' | 'neutral' =>
+	s.estado === 'failed' ? 'error' : s.estado === 'active' ? 'success' : 'neutral';
 
 onMounted(load);
 </script>
@@ -107,11 +108,15 @@ onMounted(load);
 				<!-- Todo en la ranura principal para que la fila se pueda partir: en
 				     angosto los botones bajan a la línea siguiente en vez de salirse. -->
 				<div class="flex flex-wrap items-center gap-3">
-					<div class="min-w-0 flex-1">
-						<div class="flex min-w-0 items-center gap-2">
-							<ThemeIcon name="system-run" :size="16" />
-							<span class="min-w-0 truncate text-sm text-tx-main" :title="s.unidad">{{ s.unidad }}</span>
-							<span :class="stateTone(s)" class="shrink-0 font-mono text-xs">{{ s.estado }}</span>
+					<div class="min-w-[min(12rem,100%)] flex-1 basis-0">
+						<!-- `flex-wrap`: con dos insignias el nombre se quedaba en «v…»; así
+						     las insignias bajan de línea antes de cortar el nombre. -->
+						<div class="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+							<span class="flex min-w-0 max-w-full items-center gap-2">
+								<ThemeIcon name="system-run" :size="16" />
+								<span class="min-w-0 truncate text-sm text-tx-main" :title="s.unidad">{{ s.unidad }}</span>
+							</span>
+							<Badge :tone="stateTone(s)" class="font-mono">{{ s.estado }}</Badge>
 							<!-- Se dice de qué instancia es: los del sistema piden
 							     autenticar y los del usuario no, y sin decirlo la
 							     contraseña aparece sin explicación. -->
@@ -121,7 +126,7 @@ onMounted(load);
 							{{ s.descripcion }}
 						</p>
 					</div>
-					<div class="flex shrink-0 flex-wrap gap-1">
+					<div class="flex min-w-0 flex-wrap gap-1">
 						<ActionButton
 							v-for="action in ACTIONS"
 							:key="action"

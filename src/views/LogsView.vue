@@ -98,8 +98,16 @@ function clock(microseconds: number): string {
 	return `${two(Math.floor(rest / 3600))}:${two(Math.floor((rest % 3600) / 60))}:${two(rest % 60)}`;
 }
 
+/**
+ * El nivel se marca con el canto izquierdo de la fila, como las líneas de
+ * `CodeBlock`, y el texto queda en `tx-main`: el ámbar y el rojo del esquema
+ * sobre la superficie no llegan a 4,5:1 como color de letra, y como canto sólo
+ * necesitan 3:1. Hasta la 0.8 el tono no se veía nunca —el `body *` de
+ * `main.css` pisaba toda utilidad de color de texto—, así que esto es lo
+ * primero que lo muestra.
+ */
 const levelTone = (level: number) =>
-	level <= 3 ? 'text-status-error' : level === 4 ? 'text-status-warning' : 'text-tx-muted';
+	level <= 3 ? 'border-status-error' : level === 4 ? 'border-status-warning' : 'border-transparent';
 
 onMounted(() => {
 	void loadApps();
@@ -172,14 +180,18 @@ onMounted(() => {
 				     partir de `@lg` vuelven a la misma línea. -->
 				<ListGroup class="min-h-0 flex-1 overflow-y-auto">
 					<ListRow v-for="(e, i) in visible" :key="`${e.microsegundos}-${i}`">
-						<div class="flex min-w-0 flex-col gap-0.5 @lg:flex-row @lg:gap-3">
+						<div
+							:class="levelTone(e.nivel)"
+							:data-level="e.nivel"
+							class="-ml-3 flex min-w-0 flex-col gap-0.5 border-l-2 pl-2.5 @lg:flex-row @lg:gap-3"
+						>
 							<div class="flex shrink-0 items-baseline gap-2 @lg:gap-3">
 								<span class="font-mono text-tx-muted text-xs">{{ clock(e.microsegundos) }}</span>
 								<span class="max-w-44 truncate text-tx-muted text-xs @lg:w-44" :title="e.origen">{{
 									e.origen
 								}}</span>
 							</div>
-							<span :class="levelTone(e.nivel)" class="min-w-0 flex-1 break-words text-xs">{{
+							<span class="min-w-0 flex-1 break-words text-tx-main text-xs">{{
 								e.mensaje
 							}}</span>
 						</div>

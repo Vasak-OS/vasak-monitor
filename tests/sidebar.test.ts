@@ -13,7 +13,7 @@
  */
 
 import { beforeEach, describe, expect, test } from 'bun:test';
-import { mount } from '@vue/test-utils';
+import { mount, type VueWrapper } from '@vue/test-utils';
 import { ListRow, SideBar, SideButton } from '@vasakgroup/vue-libvasak';
 import { nextTick } from 'vue';
 import App from '@/App.vue';
@@ -204,8 +204,8 @@ describe('la ventana angosta: una columna por vez', () => {
 		const wrapper = await openMonitor();
 
 		const rows = narrowList(wrapper).findAllComponents(ListRow);
-		expect(rows.map((row) => row.props('title'))).toEqual(SCREENS.map((s) => `pantallas.${s}`));
-		expect(rows.every((row) => row.props('role') === 'button')).toBe(true);
+		expect(rows.map((row: VueWrapper<any>) => row.props('title'))).toEqual(SCREENS.map((s) => `pantallas.${s}`));
+		expect(rows.every((row: VueWrapper<any>) => row.props('role') === 'button')).toBe(true);
 		expect(narrowList(wrapper).find('select').exists()).toBe(true);
 		expect(narrowList(wrapper).text()).toContain('ajustes.pausaExplicada');
 
@@ -218,7 +218,7 @@ describe('la ventana angosta: una columna por vez', () => {
 
 		const services = narrowList(wrapper)
 			.findAllComponents(ListRow)
-			.find((row) => row.props('title') === 'pantallas.servicios');
+			.find((row: VueWrapper<any>) => row.props('title') === 'pantallas.servicios');
 		await services?.trigger('click');
 		await nextTick();
 
@@ -237,8 +237,8 @@ describe('la ventana angosta: una columna por vez', () => {
 		// Y la pantalla elegida queda marcada en la lista.
 		const selected = narrowList(wrapper)
 			.findAllComponents(ListRow)
-			.filter((row) => row.props('selected'));
-		expect(selected.map((row) => row.props('title'))).toEqual(['pantallas.servicios']);
+			.filter((row: VueWrapper<any>) => row.props('selected'));
+		expect(selected.map((row: VueWrapper<any>) => row.props('title'))).toEqual(['pantallas.servicios']);
 	});
 
 	test('el relleno de la pantalla sigue a la fila de la ventana, no a la pantalla', async () => {

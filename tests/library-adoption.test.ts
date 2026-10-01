@@ -154,7 +154,7 @@ describe('los buscadores', () => {
 
 /** Monta una vista y espera a que conteste el `invoke` del `onMounted`. */
 async function mountView<T>(component: T, props: Record<string, unknown> = {}) {
-	const wrapper = track(mount(component as never, { props }));
+	const wrapper = track(mount(component as never, { props } as never));
 	for (let i = 0; i < 4; i++) {
 		await new Promise((done) => setTimeout(done, 0));
 		await nextTick();
@@ -227,8 +227,13 @@ describe('las piezas de la 2.2 (vue-libvasak#74)', () => {
 		expect(checkbox.get('input').attributes('type')).toBe('checkbox');
 
 		const badges = wrapper.findAllComponents(Badge);
-		expect(badges).toHaveLength(1);
-		expect(badges[0]?.text()).toBe('servicios.delSistema');
+		expect(badges.filter((b) => b.text() === 'servicios.delSistema')).toHaveLength(1);
+		// El estado es una insignia con tono y no texto de color: el verde y el
+		// rojo del esquema como letra sobre la superficie no llegan a 4,5:1.
+		const states = Object.fromEntries(
+			badges.filter((b) => b.text() !== 'servicios.delSistema').map((b) => [b.text(), b.props('tone')])
+		);
+		expect(states).toEqual({ active: 'success', failed: 'error' });
 
 		// Tres acciones por servicio y el de actualizar.
 		expect(wrapper.findAllComponents(ActionButton)).toHaveLength(SERVICES.length * 3 + 1);
@@ -250,6 +255,12 @@ describe('las piezas de la 2.2 (vue-libvasak#74)', () => {
 
 		// La fila pasa a una línea por el ancho del área (`@lg`) y no por el de
 		// la pantalla (`sm:`), que no descontaba la barra lateral.
+		// El nivel va en el canto, con el texto en `tx-main`: el rojo como color
+		// de letra sobre la superficie no llega a 4,5:1.
+		const level = rows[0]?.get('[data-level]');
+		expect(level?.classes()).toContain('border-status-error');
+		expect(level?.find('.text-status-error').exists()).toBe(false);
+
 		const html = rows[0]?.html() ?? '';
 		expect(html).toContain('@lg:flex-row');
 		expect(html).not.toMatch(/(?<![\w@-])sm:/);
