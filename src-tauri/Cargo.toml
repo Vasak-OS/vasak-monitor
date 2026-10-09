@@ -1,6 +1,6 @@
 [package]
 name = "vasak-monitor"
-version = "0.9.0"
+version = "0.10.0"
 description = "Monitor del sistema de VasakOS"
 authors = ["Vasak Group", "Joaquin (Pato) Decima"]
 edition = "2021"
