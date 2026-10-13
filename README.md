@@ -1,119 +1,370 @@
-# vasak-monitor
+# Vasak monitor
 
-El monitor del sistema de VasakOS. Cinco pantallas: **Recursos**, **Aplicaciones**,
-**Servicios**, **Limpieza** y **Registros**.
 
-## La decisión más importante es cuándo *no* medir
 
-Es la aplicación que muestra el consumo, así que no puede ser la primera de su
-propia lista. Tres condiciones, las tres con test:
+---
 
-- **Con la ventana tapada no se mide.** Nadie mira números que se actualizan detrás
-  de otra ventana, y medir ahí gasta exactamente lo que la pantalla dice cuidar.
-- **En las pantallas que no cambian solas tampoco.** Servicios, Limpieza y Registros
-  no se mueven por su cuenta; volver a consultarlos cada dos segundos es trabajo que
-  nadie pidió.
-- **No se lanza una consulta si la anterior no volvió.** `setInterval` no espera: con
-  el backend lento, una respuesta vieja llega después de una nueva y pisa datos más
-  recientes. Por eso el intervalo se reagenda con `setTimeout` desde que la medición
-  **terminó**.
+## Tecnología
 
-Y la interfaz lo dice. Sin eso, alguien que deja el monitor de fondo supone que
-sigue gastando.
+[![Rust](https://img.shields.io/badge/Rust-1.82%2B-orange?style=flat&logo=rust)](https://www.rust-lang.org/) [![Tauri](https://img.shields.io/badge/Tauri-2.0-24283b?style=flat&logo=tauri)](https://tauri.app/) [![Vue](https://img.shields.io/badge/Vue-3.5-42b883?style=flat&logo=vue.js)](https://vuejs.org/) [![TypeScript](https://img.shields.io/badge/TypeScript-5.6-3178c6?style=flat&logo=typescript)](https://www.typescriptlang.org/)
 
-## Las cuatro trampas de `/proc`
+## Estado
 
-Cada una tiene su test, y ninguna falla si se hace mal — todas informan un número
-que parece razonable.
+[![CI](https://github.com/Vasak-OS/vasak-monitor/actions/workflows/ci.yml/badge.svg)](https://github.com/Vasak-OS/vasak-monitor/actions/workflows/ci.yml)
+[![Versión](https://img.shields.io/github/v/release/Vasak-OS/vasak-monitor?style=flat&label=Versi%C3%B3n)](https://github.com/Vasak-OS/vasak-monitor/releases)
+[![Licencia](https://img.shields.io/github/license/Vasak-OS/vasak-monitor?style=flat)](LICENSE)
+[![Cobertura](https://sonarcloud.io/api/project_badges/measure?project=Vasak-OS_vasak-monitor&metric=coverage&style=flat)](https://sonarcloud.io/summary/new_code?id=Vasak-OS_vasak-monitor)
+[![Quality Gate](https://sonarcloud.io/api/project_badges/measure?project=Vasak-OS_vasak-monitor&metric=alert_status&style=flat)](https://sonarcloud.io/summary/new_code?id=Vasak-OS_vasak-monitor)
+[![Tamaño repo](https://img.shields.io/github/repo-size/Vasak-OS/vasak-monitor?style=flat)](https://github.com/Vasak-OS/vasak-monitor)
 
-**La CPU sólo existe como diferencia.** `/proc/stat` da jiffies acumulados desde el
-arranque; un porcentaje sobre una sola lectura es el promedio de toda la sesión, y
-después de un rato encendido se queda clavado alrededor del 2%. Y `iowait` cuenta
-como inactivo: esperando al disco la CPU no trabaja, y contarlo haría que copiar un
-archivo grande pareciera un procesador saturado.
+---
 
-**La memoria se mide con `MemAvailable`, no con `MemFree`.** En Linux `MemFree`
-tiende a cero porque el kernel usa lo que sobra como caché. En la máquina de
-desarrollo son 300 MB de 16 GB: informarlo diría «te queda el 2%» estando holgada.
-La caché se muestra aparte y explicada, para que nadie intente «liberar» algo que no
-le está quitando nada.
+## Descripción
 
-**El disco muestra sólo lo que ocupa disco.** `/proc/mounts` lista decenas de
-montajes que no son almacenamiento, y un dispositivo montado dos veces —subvolúmenes
-de btrfs— es el mismo espacio. Los puntos de montaje vienen escapados en octal, así
-que `Disco\040externo` hay que desescaparlo o la ruta que se consulta no existe.
 
-**La red también es una diferencia**, y `lo` no cuenta: el tráfico local no sale de
-la máquina, y contarlo hace que hablar con el llavero parezca actividad de red.
 
-## Y dos de los procesos, que enseñó el `/proc` real
+**Para el usuario:** 
 
-**El nombre en `stat` viene entre paréntesis y puede contener espacios y
-paréntesis.** Partiendo la línea por espacios, todos los campos se corren y la CPU y
-la memoria salen de otra columna.
+**Integración VasakOS:** Integra con el ecosistema VasakOS vía D-Bus y configuración compartida.
 
-**Chromium y Electron reescriben su `argv`** como un bloque con espacios en lugar de
-nulos. Partiendo sólo por nulos apareció una fila llamada `app.asar
---enable-sandbox --ozone-platform=wayland …` de dos mil caracteres que rompía la
-tabla. Eso no lo encontró un test escrito de antemano: lo encontró contrastar los
-parsers con el `/proc` de la máquina, que es para lo que existe
-`examples/sondeo.rs`.
+---
 
-Los procesos se agrupan por nombre porque un navegador son diez y ninguno es «el
-consumo de Chrome». Con la agrupación arreglada, 208 procesos se resumen en 96
-aplicaciones y Chrome aparece como una fila de 1,9 GB.
+## Arquitectura (diagramas)
 
-## Limpieza: la parte incómoda
+> Copia y pega la plantilla que necesites, descomenta y adapta.
 
-Casi todo lo que promete «liberar memoria» en Linux **no libera nada**. Lo que
-parece ocupado es caché de disco, y el sistema la devuelve sola cuando algo la pide.
-Vaciarla obliga a volver a leer del disco lo que ya estaba en memoria: después va
-más lento, no más rápido.
+### Flujo de datos
 
-Así que acá no hay un botón que lo prometa. Hay dos que hacen algo medible, y dicen
-qué hacen:
+```mermaid
+<!--
+graph TD
+    A[Entrada: Teclado / Ratón / D-Bus / Sistema] --> B[Procesamiento: Core Rust + Tauri Commands]
+    B --> C[Salida: UI actualizada / Acciones del sistema]
+    style A fill:#e1f5fe
+    style C fill:#e8f5e9
+-->
+```
 
-- **Devolver el swap a la memoria.** Con RAM libre, las páginas que quedaron en disco
-  vuelven. En la máquina de desarrollo el swap estaba al 71% con la RAM al 46%, que
-  es justo el caso donde sirve.
-- **Vaciar la caché del kernel.** Ofrecida y explicada, para cuando se quiere medir
-  algo desde frío. No como una mejora.
+### Componentes internos
 
-En disco, en cambio, hay espacio real: 10,8 GB en `~/.cache`, 5,3 GB de caché de
-pacman, el diario y la papelera. Lo del usuario no pide autenticar; lo del sistema
-pasa por `pkexec`, que lo pregunta con el agente de polkit que ya está corriendo.
+```mermaid
+<!--
+flowchart LR
+    subgraph App[Vasak monitor]
+        UI[Frontend Vue 3 + vue-libvasak]
+        Core[Core Rust: lógica principal]
+        IPC[Tauri Commands / Eventos]
+        System[Systemd / D-Bus / PipeWire / Wayland]
+    end
+    UI --> IPC
+    IPC --> Core
+    Core --> DBus[(D-Bus / zbus)]
+    Core --> System
+    style UI fill:#f3e5f5
+    style Core fill:#e3f2fd
+    style DBus fill:#fff3e0
+    style System fill:#fce4ec
+-->
+```
 
-## Cerrar una aplicación
+### Integración en el sistema VasakOS
 
-`SIGTERM` al **grupo** de procesos, no `SIGKILL` al proceso. Lo primero le da al
-programa la chance de guardar lo que tenga abierto, y matar sólo el padre deja los
-hijos consumiendo lo mismo. La interfaz dice que *pide* cerrar y no que mata: quien
-espera lo segundo y ve el programa abierto cree que falló.
+```mermaid
+<!--
+C4Context
+    title Vasak monitor en VasakOS
+    Person(usuario, "Usuario", "Persona que usa el sistema")
+    System_Boundary(c1, "VasakOS") {
+        System(app, "Vasak monitor", "")
+        System_Ext(settings, "vasak-settings", "Configuración central")
+        System_Ext(keyring, "vasak-keyring", "Secrets y claves")
+        System_Ext(accounts, "vasak-accounts", "Cuentas e identidad")
+        System_Ext(permissions, "vasak-permissions", "Permisos y portales")
+    }
+    System_Ext(systemd, "systemd", "Gestión de servicios")
+    System_Ext(dbus, "D-Bus", "Bus de mensajes del sistema")
+    System_Ext(wayland, "Wayland / Wayfire", "Compositor")
+    System_Ext(pipewire, "PipeWire", "Multimedia")
+    Rel(usuario, app, "Usa")
+    Rel(app, settings, "Lee/escribe config")
+    Rel(app, keyring, "Guarda/lee secrets")
+    Rel(app, accounts, "Identidad de cuenta")
+    Rel(app, permissions, "Solicita permisos")
+    Rel(app, systemd, "Activación / sockets")
+    Rel(app, dbus, "Expone / consume interfaces")
+    Rel(app, wayland, "Superficies / protocolos")
+    Rel(app, pipewire, "Streams de audio/video")
+-->
+```
 
-## Servicios
+---
 
-Lo fallido primero, después lo de VasakOS, el resto alfabético. Un orden puramente
-alfabético entierra un servicio caído en la mitad de cincuenta y cinco filas, que es
-exactamente lo que alguien viene a buscar. Los del usuario se manejan directo; los
-del sistema por `pkexec`, y la fila lo dice — si no, la contraseña aparece sin
-explicación.
+## Instalación
 
-## Registros
+### Arch Linux (repo oficial)
 
-`journalctl -o json` y no el formato tabulado: ese pierde el nivel de severidad y la
-unidad, que son lo único que permite filtrar. Sin filtro, «los registros» son diez
-mil líneas donde el error que se busca está en alguna parte.
+```bash
+pacman -S vasak-vasak-monitor
+```
 
-Las horas se muestran en local. El diario informa en UTC, y sin convertir no
-coinciden con nada de lo que la persona vio en el reloj del panel.
+### Debian / Ubuntu (.deb)
 
-## Lo que falta
+```bash
+wget https://github.com/Vasak-OS/vasak-monitor/releases/download/v{{VERSION}}/vasak-vasak-monitor_{{VERSION}}_amd64.deb
+sudo apt install ./vasak-vasak-monitor_{{VERSION}}_amd64.deb
+```
 
-- **Gráficos con historia**, para ver una subida y no sólo el instante.
-- **Uso de CPU por aplicación** como porcentaje comparable: hoy se informa el delta
-  de jiffies, que sirve para ordenar pero no para leer como número.
-- **Aviso cuando un servicio de VasakOS se cae**, sin tener que abrir esto.
+### Desde fuente
+
+```bash
+git clone https://github.com/Vasak-OS/vasak-monitor.git
+cd vasak-monitor
+
+# Desarrollo (recarga en caliente frontend + backend)
+bun run dev
+
+# Build producción
+bun run build
+
+# Solo frontend
+bun run build:frontend
+
+# Solo backend Rust
+cargo build --release --locked
+```
+
+### Flatpak / AppImage
+
+> *Placeholder: añadir cuando exista paquete Flatpak o AppImage oficial.*
+
+---
+
+## Uso rápido
+
+```bash
+# Se lanza automáticamente (systemd --user) o manualmente:
+vasak-monitor
+```
+
+### Atajos / flags principales
+
+| Acción | Comando / Tecla |
+|--------|-----------------|
+| Acción principal | `vasak-monitor` |
+| Configuración | `vasak-monitor --config` |
+| Ayuda | `vasak-monitor --help` |
+
+> **Captura:** `assets/demo.gif` *(placeholder — sustituir por GIF real)*
+
+---
+
+## Configuración
+
+### Archivo de configuración
+
+```
+~/.config/vasak/vasak-monitor.toml
+```
+
+### Variables de entorno
+
+| Variable | Descripción | Por defecto |
+|----------|-------------|-------------|
+| `VASAK_DEBUG` | Activa logs de depuración en consola | `false` |
+| `VASAK_PROFILE` | Perfil de rendimiento: `balanced`, `performance`, `power-save` | `balanced` |
+
+### Integración con `tauri-plugin-config-manager`
+
+- Esquemas de color: respeta `--ui-primary`, `--ui-surface`, `--ui-focus`, `--ui-on-surface`, `--ui-border`
+- Tema de iconos: usa el tema del sistema (`vasakos-icon-theme`) vía `vicon` lookup
+- Radio de bordes: variable CSS `--ui-radius` del esquema activo (por defecto 12px)
+- Fuentes: `--ui-font-family`, `--ui-font-size-base` desde el esquema
+
+---
+
+## Desarrollo
+
+### Requisitos
+
+- **Rust:** `rustup` toolchain estable (`rust-toolchain.toml` fija la versión)
+- **Node / bun:** `bun` ≥ 1.1 (nunca npm/yarn/pnpm para apps Tauri)
+- **Sistema:** `pkg-config`, `libgtk-3-dev`, `libwebkit2gtk-4.1-dev`, `libssl-dev`
+- *`libgtk-layer-shell-dev`, `wayland-protocols`, `wayfire-dev` para Wayland*
+
+### Dependencias de desarrollo
+
+#### Sistema (paquetes Arch / Debian / Fedora)
+
+`base-devel`, `pkgconf`, `libssl-dev`, `libwebkit2gtk-4.1-dev`, `libgtk-3-dev`, `libayatana-appindicator3-dev`, `librsvg2-dev`, `gstreamer1.0-plugins-base`, `gstreamer1.0-plugins-good`, `libpipewire-0.3-dev`, `libwireplumber-0.5-dev`, `libdbus-1-dev`, `libudev-dev`, `libxkbcommon-dev`, `libwayland-dev`, `meson`, `ninja`, `clang`, `lld`
+
+#### Rust
+
+`rustup` → `stable` + `rustfmt` + `clippy`
+
+#### Node
+
+**Solo `bun`** (nunca npm/yarn/pnpm para apps Tauri). `bun --version` ≥ 1.1
+
+#### Herramientas CLI
+
+`just` (command runner), `cargo-binstall` (opcional), `cargo-llvm-cov` (para cobertura)
+
+### Correr la app en desarrollo
+
+```bash
+# Frontend (Vite dev server + Tauri dev)
+bun run tauri dev
+
+# Solo frontend (Vite)
+bun run dev
+
+# Solo backend (cargo watch)
+cargo watch -x "run --bin vasak-monitor"
+```
+
+### Compilar / Build de release
+
+```bash
+# Build completo (frontend + backend + bundle)
+bun run tauri build
+
+# Solo frontend (para testear bundle después)
+bun run build
+
+# Solo backend Rust (binario optimizado)
+cargo build --release --locked
+
+# Paquetes nativos
+# Arch: makepkg -sf en PKGBUILDS/vasak-monitor/
+# Debian: cargo deb --no-build --target-dir src-tauri/target/release/debian
+```
+
+### Targets principales
+
+```bash
+# Desarrollo (Tauri dev server + hot reload)
+bun run dev
+
+# Build producción
+bun run build
+
+# Solo frontend
+bun run build:frontend
+
+# Solo backend Rust
+cargo build --release --locked
+
+# Lint + tipos (pre-commit / CI)
+bunx --bun biome check .
+bunx vue-tsc --noEmit
+cargo fmt --check
+```
+
+### Pruebas
+
+```bash
+# Suite completa JS (Vitest via bun:test)
+bun test
+
+# Suite completa Rust (crates en pruebas_rust del CI)
+cargo test -p vasak-monitor-core -p vasak-monitor-ui --locked
+
+# Integración (requiere Wayfire corriendo)
+cargo test -p vasak-monitor-integration --locked -- --ignored
+```
+
+### Convención de commits
+
+[Conventional Commits](https://www.conventionalcommits.org/es/v1.0.0/):
+
+```
+<tipo>(<ámbito>): <descripción corta>
+
+[cuerpo opcional]
+
+[pie opcional: Closes #N]
+```
+
+Tipos habituales: `feat`, `fix`, `bugfix`, `docs`, `ci`, `chore`, `security`, `refactor`, `perf`, `test`.
+
+### Cómo abrir PR
+
+1. Rama desde `origin/main`:
+   ```bash
+   git worktree add -b feat/tema ~/wt/vasak-monitor-tema origin/main
+   ```
+2. Prefijos de rama: `fix/`, `feat/`, `bugfix/`, `docs/`, `ci/`, `chore/`, `security/`
+3. Escribe el fix → **`qa` escribe las pruebas** (fallan sin el fix) → suite verde → abre PR
+4. Al abrir PR, **cuatro cosas obligatorias**:
+   - Asignado a `JoaquinDecima`
+   - Etiqueta `enhancement` o `bug` (+ `ci` / `dependencies` si aplica)
+   - Añadido al proyecto «VasakOS Roadmap»
+   - Status **In Progress**
+
+---
+
+## Arquitectura (texto)
+
+### Crates / módulos principales
+
+| `vasak-monitor-core` | Lógica compartida: estado, D-Bus, IPC |
+| `vasak-monitor-ui` | Frontend Vue 3 + componentes vue-libvasak |
+| `vasak-monitor-tauri` | Puente Tauri: commands, eventos, WebView |
+
+### Interfaces D-Bus / zbus expuestas
+
+| `org.vasak.Vasak-monitor` | `GetState()`, `StateChanged(dict)`, `SetConfig(dict)` | Estado y control principal |
+| `org.vasak.Vasak-monitor.Panel` | `SetPosition(string)`, `SetAutohide(bool)`, `Height(u32)` | Configuración panel en runtime |
+
+### Puntos de extensión
+
+- **Plugins:** Sistema de plugins modular
+- **Hooks:** Hooks de ciclo de vida
+- **API pública Rust:** API pública del crate principal
+
+### Features / Cargo features
+
+| Feature | Descripción | Default |
+|---------|-------------|---------|
+| `system-tray` | Bandeja del sistema + menú contextual | ✓ |
+| `notifications` | Integración libnotify / freedesktop | ✓ |
+| `updater` | Auto-actualización (tauri-plugin-updater) | |
+| `devtools` | DevTools en release (solo debug) | |
+| `experimental-wayland` | Protocolo Wayland inestable | |
+
+Y para apps Tauri+Vue: features del `tauri.conf.json` → `bundle` / `plugins` / `allowlist` (capabilities).
+
+---
+
+## Pruebas y calidad
+
+- **Cobertura objetivo:** ≥ 80 % del código nuevo (SonarCloud Quality Gate)
+- **Informes:** GitHub Actions → pestaña *SonarCloud Code Analysis* → enlace a SonarCloud
+- **Añadir pruebas:** ver `AGENTS.md` sección 9 (mapa de repos y comandos de prueba)
+- **Regla:** toda corrección lleva prueba escrita por `qa` que falla sin el fix
+
+---
+
+## Contribuir
+
+- **Guía:** [.github/CONTRIBUTING.md](https://github.com/Vasak-OS/.github/blob/main/CONTRIBUTING.md)
+- **Plantillas de issue:** [.github/ISSUE_TEMPLATE/](https://github.com/Vasak-OS/.github/tree/main/ISSUE_TEMPLATE)
+- **Código de conducta:** [CODE_OF_CONDUCT.md](https://github.com/Vasak-OS/.github/blob/main/CODE_OF_CONDUCT.md)
+
+---
+
+## Donadores / Sponsors
+
+[![Sponsors](https://img.shields.io/github/sponsors/Vasak-OS?style=flat&label=Sponsors)](https://github.com/sponsors/Vasak-OS)
+
+> **Backers:** *Actualizado automáticamente en CI desde GitHub Sponsors / OpenCollective / Polar.*
+
+[💖 Donar al proyecto](https://github.com/sponsors/Vasak-OS)
+
+---
 
 ## Licencia
 
-GPL-3.0-or-later.
+`GPL-3.0` — Copyright © 2026 **Vasak-OS Contributors**
+
+[Ver licencia completa](LICENSE)
