@@ -58,7 +58,9 @@ describe('la barra', () => {
 		const navs = wrapper.findAll('nav');
 		expect(navs).toHaveLength(1);
 		expect(navs[0]?.attributes('data-narrow-list')).toBeDefined();
-		expect(navs[0]?.findAll('button')).toHaveLength(0);
+		// Y sin botones propios: lo único con forma de botón es el del selector de
+		// intervalo, que es el desplegable de la librería (`aria-haspopup`).
+		expect(navs[0]?.findAll('button:not([aria-haspopup])')).toHaveLength(0);
 	});
 
 	test('sin área de título, que ya está arriba', async () => {
@@ -134,7 +136,9 @@ describe('el intervalo de medición', () => {
 		const wrapper = await openMonitor();
 
 		const sidebar = wrapper.findComponent(SideBar);
-		const select = sidebar.find('select');
+		// Desde la 2.19 del componente no hay `<select>`: el control es el botón
+		// del desplegable de la librería.
+		const select = sidebar.find('button[aria-haspopup="listbox"]');
 		expect(select.exists()).toBe(true);
 
 		// Y su nombre queda atado al control. La etiqueta la pone el propio
@@ -206,7 +210,7 @@ describe('la ventana angosta: una columna por vez', () => {
 		const rows = narrowList(wrapper).findAllComponents(ListRow);
 		expect(rows.map((row: VueWrapper<any>) => row.props('title'))).toEqual(SCREENS.map((s) => `pantallas.${s}`));
 		expect(rows.every((row: VueWrapper<any>) => row.props('role') === 'button')).toBe(true);
-		expect(narrowList(wrapper).find('select').exists()).toBe(true);
+		expect(narrowList(wrapper).find('button[aria-haspopup="listbox"]').exists()).toBe(true);
 		expect(narrowList(wrapper).text()).toContain('ajustes.pausaExplicada');
 
 		// La pantalla queda escondida en angosto, pero no en ancho.
