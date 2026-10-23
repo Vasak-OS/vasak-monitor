@@ -15,7 +15,7 @@
 import { afterEach, describe, expect, test } from 'bun:test';
 import { SelectField } from '@vasakgroup/vue-libvasak';
 import { mount, type VueWrapper } from '@vue/test-utils';
-import { h, ref } from 'vue';
+import { h, nextTick, ref } from 'vue';
 import { INTERVALOS } from '@/tools/sondeo';
 
 let vista: VueWrapper | null = null;
@@ -35,7 +35,8 @@ describe('elegir un intervalo', () => {
 		const elegido = ref<string | number>(INTERVALOS[0]);
 		// Se monta el mismo armado que usa la ventana: el desplegable compartido
 		// con las opciones atando el número.
-		vista = mount({
+		vista = mount(
+			{
 			setup: () =>
 				() =>
 					h(
@@ -48,9 +49,15 @@ describe('elegir un intervalo', () => {
 						},
 						() => INTERVALOS.map((i) => h('option', { value: i }, `${i / 1000} s`))
 					),
-		});
+			},
+			{ attachTo: document.body }
+		);
 
-		await vista.get('select').setValue(String(INTERVALOS[1]));
+		// Desde la 2.19 del componente no hay `<select>`: se abre la lista con el
+		// botón y se elige una opción, como lo hace quien lo usa.
+		await vista.get('button').trigger('click');
+		await nextTick();
+		await vista.findAll('[role="option"]')[1]?.trigger('click');
 
 		expect(elegido.value).toBe(INTERVALOS[1]);
 		expect(typeof elegido.value).toBe('number');

@@ -301,7 +301,14 @@ describe('las piezas de la 2.2 (vue-libvasak#74)', () => {
 		responderInvoke('registros_de_vasakos', []);
 		const wrapper = await mountView(LogsView);
 
-		await wrapper.get('select').setValue('vasak-mail');
+		// Desde la 2.19 del componente no hay `<select>`: se abre la lista con el
+		// botón y se elige la opción por su texto.
+		await wrapper.get('button[aria-haspopup="listbox"]').trigger('click');
+		await nextTick();
+		await wrapper
+			.findAll('[role="option"]')
+			.find((option) => option.text().includes('vasak-mail'))
+			?.trigger('click');
 		for (let i = 0; i < 4; i++) {
 			await new Promise((done) => setTimeout(done, 0));
 			await nextTick();
