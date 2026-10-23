@@ -15,6 +15,7 @@ import {
 import { onMounted, onUnmounted, ref } from 'vue';
 import WindowAppLayout from '@/layouts/WindowAppLayout.vue';
 import { esEnVivo, INTERVALO_POR_OMISION, INTERVALOS, intervaloValido } from '@/tools/sondeo';
+import { saveTheme } from '@/tools/theme-cache';
 import AppsView from '@/views/AppsView.vue';
 import CleanupView from '@/views/CleanupView.vue';
 import LogsView from '@/views/LogsView.vue';
@@ -65,13 +66,15 @@ function open(next: Screen) {
 
 onMounted(async () => {
 	try {
-		await configStore.loadConfig();
+		await configStore.loadConfig().then(() => saveTheme());
 		// El intervalo se valida al leerlo: un valor escrito a mano en la
 		// configuración no debe dejar el monitor midiendo cada milisegundo.
 		interval.value = intervaloValido(
 			configStore.config?.monitor?.intervalo ?? INTERVALO_POR_OMISION
 		);
-		stopConfigListener = await listen('config-changed', () => void configStore.loadConfig());
+		stopConfigListener = await listen('config-changed', () => {
+			void configStore.loadConfig().then(() => saveTheme());
+		});
 	} catch {
 		// Sin configuración se usa el intervalo por omisión: no arrancar por no
 		// poder leer una preferencia sería peor que ignorarla.
