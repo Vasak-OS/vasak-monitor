@@ -3,10 +3,11 @@
 //! Lo que hay acá no es decoración: cada pieza resuelve algo que en las
 //! aplicaciones reales del escritorio se rompió al menos una vez.
 
+pub mod comandos;
+pub mod commands;
+pub mod limpieza;
 mod locales;
 pub mod muestreo;
-pub mod comandos;
-pub mod limpieza;
 pub mod proyectos;
 pub mod registros;
 pub mod servicios;
@@ -35,6 +36,7 @@ pub fn run() {
         .plugin(tauri_plugin_vicons::init())
         .plugin(tauri_plugin_shell::init())
         .invoke_handler(tauri::generate_handler![
+            commands::webkit::tune_webview,
             comandos::recursos,
             comandos::aplicaciones,
             comandos::cerrar,

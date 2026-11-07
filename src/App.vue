@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { invoke } from '@tauri-apps/api/core';
 import type { UnlistenFn } from '@tauri-apps/api/event';
 import { listen } from '@tauri-apps/api/event';
 import { useConfigStore } from '@vasakgroup/plugin-config-manager';
@@ -65,6 +66,8 @@ function open(next: Screen) {
 }
 
 onMounted(async () => {
+	// Afina el WebKit de la ventana apenas monta, para bajar su piso de memoria.
+	invoke('tune_webview').catch(() => {});
 	try {
 		await configStore.loadConfig().then(() => saveTheme());
 		// El intervalo se valida al leerlo: un valor escrito a mano en la

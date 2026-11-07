@@ -4044,7 +4044,7 @@ dependencies = [
 
 [[package]]
 name = "vasak-monitor"
-version = "0.10.4"
+version = "0.10.5"
 dependencies = [
  "gtk",
  "libc",
@@ -4059,6 +4059,7 @@ dependencies = [
  "tauri-plugin-vicons",
  "tauri-plugin-vsk-contextual-menu",
  "tauri-plugin-vsk-journal",
+ "webkit2gtk",
 ]
 
 [[package]]
