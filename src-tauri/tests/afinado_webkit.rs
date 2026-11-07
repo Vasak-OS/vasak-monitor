@@ -66,13 +66,25 @@ fn los_extras_de_desarrollo_solo_se_apagan_en_release() {
 fn la_aceleracion_y_el_webgl_no_se_tocan() {
     // El monitor anima sus gráficos: apagarlos los haría tironear.
     let fuente = leer("src/commands/webkit.rs");
-    for palanca in ["hardware_acceleration", "webgl"] {
+    for palanca in ["set_hardware_acceleration_policy", "set_enable_webgl"] {
         assert!(
             !fuente.contains(palanca),
-            "«{palanca}» no se toca en commands/webkit.rs: el monitor anima sus \
-             gráficos y apagarlo los haría tironear"
+            "commands/webkit.rs no debe llamar a «{palanca}»: el monitor anima \
+             sus gráficos y apagarlos los haría tironear"
         );
     }
+}
+
+#[test]
+fn el_comando_aplica_el_afinado_al_webview() {
+    // Con las palancas puestas pero sin esta llamada, `tune_webkit` nunca corre
+    // y el afinado no llega al webview.
+    assert!(
+        leer("src/commands/webkit.rs").contains("tune_webkit(&webview)"),
+        "commands/webkit.rs no llama a `tune_webkit(&webview)` en tune_webview: \
+         las palancas quedan definidas pero nunca se aplican y el consumo de \
+         memoria no baja"
+    );
 }
 
 #[test]
