@@ -49,6 +49,7 @@ tauri-plugin-shell = "2"
 
 # Para la ventana sin decoración: la barra propia necesita mover y redimensionar.
 gtk = "0.18"
+webkit2gtk = "2.0"
 tauri-plugin-vsk-journal = "2"
 
 [dev-dependencies]
