@@ -5,7 +5,7 @@
 //! eso importa el doble, porque es la aplicación que muestra el consumo.
 
 use crate::muestreo::{cpu, discos, memoria, procesos, red, ventanas};
-use crate::{limpieza, proyectos, registros, servicios};
+use crate::{limpieza, proyectos, puertos, registros, servicios};
 use std::sync::{Mutex, OnceLock};
 use std::time::Instant;
 
@@ -263,6 +263,22 @@ pub fn lista_de_servicios() -> Vec<servicios::Servicio> {
     }
 
     servicios::ordenar(todos)
+}
+
+/// Los puertos a la escucha, con el proceso que los ocupa cuando `ss` lo ve.
+///
+/// Si `ss` no está o falla, la lista vuelve vacía: la pantalla muestra «no hay
+/// puertos» en vez de un error, igual que el resto del monitor ante una fuente que
+/// no respondió.
+#[tauri::command]
+pub fn puertos_en_uso() -> Vec<puertos::Puerto> {
+    let salida = std::process::Command::new("ss")
+        .args(["-H", "-tulpn"])
+        .output();
+    match salida {
+        Ok(s) => puertos::ordenar(puertos::puertos_de(&String::from_utf8_lossy(&s.stdout))),
+        Err(_) => Vec::new(),
+    }
 }
 
 /// Arranca, para o reinicia un servicio.

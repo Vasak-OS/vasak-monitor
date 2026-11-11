@@ -17,6 +17,7 @@ pantallas:
   recursos: Resources
   aplicaciones: Applications
   servicios: Services
+  puertos: Ports
   limpieza: Cleanup
   registros: Logs
 # En una ventana angosta va una pantalla por vez: la lista y, al elegir, la
@@ -69,6 +70,13 @@ servicios:
   start: Start
   stop: Stop
   restart: Restart
+puertos:
+  total: "{0} listening"
+  sinPrivilegio: >-
+    {0} without a process: opened by another user or root, and seeing which needs privileges.
+  sinProceso: Unknown process
+  pid: "PID {0}"
+  vacio: No listening ports
 limpieza:
   midiendo: Measuring what can be reclaimed…
   totalEtiqueta: Reclaimable space

@@ -27,6 +27,7 @@ pantallas:
   recursos: Recursos
   aplicaciones: Aplicaciones
   servicios: Servicios
+  puertos: Puertos
   limpieza: Limpieza
   registros: Registros
 # En una ventana angosta va una pantalla por vez: la lista y, al elegir, la
@@ -79,6 +80,13 @@ servicios:
   start: Arrancar
   stop: Detener
   restart: Reiniciar
+puertos:
+  total: "{0} a la escucha"
+  sinPrivilegio: >-
+    {0} sin proceso: los abrió otro usuario o root, y ver cuál necesita privilegios.
+  sinProceso: Proceso desconocido
+  pid: "PID {0}"
+  vacio: No hay puertos a la escucha
 limpieza:
   midiendo: Midiendo cuánto se puede recuperar…
   totalEtiqueta: Espacio recuperable
