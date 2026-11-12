@@ -252,7 +252,14 @@ pub fn lista_de_servicios() -> Vec<servicios::Servicio> {
 
     for (del_usuario, ambito) in [(true, "--user"), (false, "--system")] {
         let salida = std::process::Command::new("systemctl")
-            .args([ambito, "list-units", "--type=service", "--plain", "--no-legend", "--all"])
+            .args([
+                ambito,
+                "list-units",
+                "--type=service",
+                "--plain",
+                "--no-legend",
+                "--all",
+            ])
             .output();
         if let Ok(s) = salida {
             todos.extend(servicios::servicios_de(
@@ -361,7 +368,9 @@ pub fn recuperable() -> Vec<Recuperable> {
             du_de(&ruta)
         } else {
             match tarea {
-                limpieza::Tarea::CacheDePaquetes => du_de(std::path::Path::new("/var/cache/pacman/pkg")),
+                limpieza::Tarea::CacheDePaquetes => {
+                    du_de(std::path::Path::new("/var/cache/pacman/pkg"))
+                }
                 limpieza::Tarea::DiarioViejo => std::process::Command::new("journalctl")
                     .arg("--disk-usage")
                     .output()
@@ -417,7 +426,12 @@ pub fn limpiar(tarea: limpieza::Tarea) -> Result<(), String> {
                 "sh",
                 vec![
                     "-c".into(),
-                    format!("rm -rf -- {}/..?* {}/.[!.]* {}/*", ruta.display(), ruta.display(), ruta.display()),
+                    format!(
+                        "rm -rf -- {}/..?* {}/.[!.]* {}/*",
+                        ruta.display(),
+                        ruta.display(),
+                        ruta.display()
+                    ),
                 ],
             )
         }
@@ -480,7 +494,10 @@ pub fn limpiar(tarea: limpieza::Tarea) -> Result<(), String> {
 /// `registros::argumentos_de_campo`.
 fn origenes_presentes() -> Vec<String> {
     let mut texto = String::new();
-    for (ambito, unidad) in [("--user", "_SYSTEMD_USER_UNIT"), ("--system", "_SYSTEMD_UNIT")] {
+    for (ambito, unidad) in [
+        ("--user", "_SYSTEMD_USER_UNIT"),
+        ("--system", "_SYSTEMD_UNIT"),
+    ] {
         for campo in ["SYSLOG_IDENTIFIER", "_COMM", unidad] {
             if let Ok(s) = std::process::Command::new("journalctl")
                 .args(registros::argumentos_de_campo(ambito, campo))
@@ -538,7 +555,10 @@ pub fn registros_de_vasakos(
         // opciones.
         argumentos.extend(coincidencias.iter().map(|c| c.as_str()));
 
-        if let Ok(s) = std::process::Command::new("journalctl").args(&argumentos).output() {
+        if let Ok(s) = std::process::Command::new("journalctl")
+            .args(&argumentos)
+            .output()
+        {
             entradas.extend(registros::entradas_de(&String::from_utf8_lossy(&s.stdout)));
         }
     }
@@ -627,9 +647,9 @@ fn estado_en_git(ruta: &std::path::Path) -> (bool, bool) {
 
     match salida {
         Ok(s) => match s.status.code() {
-            Some(0) => (true, true),   // hay repo y la ignora
-            Some(1) => (true, false),  // hay repo y NO la ignora
-            _ => (false, false),       // 128: no hay repositorio
+            Some(0) => (true, true),  // hay repo y la ignora
+            Some(1) => (true, false), // hay repo y NO la ignora
+            _ => (false, false),      // 128: no hay repositorio
         },
         // Sin git instalado no se puede comprobar nada, así que se responde «no
         // hay repo»: las inequívocas siguen ofreciéndose y el resto no.
@@ -720,7 +740,12 @@ pub async fn medir_proyecto(ruta: String) -> Option<u64> {
 /// entera deja de servir —la lista aparece, todos los tamaños quedan en «…» y
 /// cada borrado responde «esa carpeta no está en el directorio del usuario»—.
 fn home_real() -> Option<std::path::PathBuf> {
-    std::env::var("HOME").ok()?.parse::<std::path::PathBuf>().ok()?.canonicalize().ok()
+    std::env::var("HOME")
+        .ok()?
+        .parse::<std::path::PathBuf>()
+        .ok()?
+        .canonicalize()
+        .ok()
 }
 
 fn validar_candidata(texto: &str) -> Result<std::path::PathBuf, String> {
@@ -842,7 +867,10 @@ mod tests_proyectos {
         // Y con un `..` que se escapa, que es el intento que un prefijo ingenuo
         // no atrapa: por eso la ruta se canonicaliza antes de comparar.
         let escape = format!("{home}/app/../../../../etc");
-        assert!(validar_bajo(&escape, &home).is_err(), "un .. se escapó del home");
+        assert!(
+            validar_bajo(&escape, &home).is_err(),
+            "un .. se escapó del home"
+        );
         let _ = std::fs::remove_dir_all(&raiz);
     }
 
