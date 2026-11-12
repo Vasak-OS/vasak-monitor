@@ -267,18 +267,24 @@ pub fn lista_de_servicios() -> Vec<servicios::Servicio> {
 
 /// Los puertos a la escucha, con el proceso que los ocupa cuando `ss` lo ve.
 ///
-/// Si `ss` no está o falla, la lista vuelve vacía: la pantalla muestra «no hay
-/// puertos» en vez de un error, igual que el resto del monitor ante una fuente que
-/// no respondió.
+/// Devuelve `Err` si `ss` no arranca o termina con error, para que la pantalla
+/// distinga «no se pudo averiguar» de «no hay puertos»: una lista vacía queda
+/// reservada a una lectura que salió bien y no encontró ninguno.
 #[tauri::command]
-pub fn puertos_en_uso() -> Vec<puertos::Puerto> {
+pub fn puertos_en_uso() -> Result<Vec<puertos::Puerto>, String> {
     let salida = std::process::Command::new("ss")
         .args(["-H", "-tulpn"])
-        .output();
-    match salida {
-        Ok(s) => puertos::ordenar(puertos::puertos_de(&String::from_utf8_lossy(&s.stdout))),
-        Err(_) => Vec::new(),
+        .output()
+        .map_err(|e| format!("no se pudo ejecutar ss: {e}"))?;
+    if !salida.status.success() {
+        return Err(format!(
+            "ss terminó con error: {}",
+            String::from_utf8_lossy(&salida.stderr).trim()
+        ));
     }
+    Ok(puertos::ordenar(puertos::puertos_de(
+        &String::from_utf8_lossy(&salida.stdout),
+    )))
 }
 
 /// Arranca, para o reinicia un servicio.

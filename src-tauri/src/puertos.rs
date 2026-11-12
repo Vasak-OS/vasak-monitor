@@ -24,14 +24,22 @@ pub struct Puerto {
 /// Lee la salida de `ss -H -tulpn` (sin encabezado).
 ///
 /// El formato por línea es: netid, estado, recv-q, send-q, dirección local,
-/// dirección remota y —si `ss` lo resolvió— el proceso. Se toman por posición; el
-/// proceso es el séptimo y puede faltar. Una línea a la que le falten los primeros
+/// dirección remota y —si `ss` lo resolvió— el proceso. Las seis columnas se toman
+/// por posición; el proceso, que puede faltar y cuyo nombre puede llevar espacios,
+/// se separa por su marca `users:(`. Una línea a la que le falten los primeros
 /// campos se saltea en vez de inventar un puerto.
 pub fn puertos_de(texto: &str) -> Vec<Puerto> {
     let mut lista = Vec::new();
 
     for linea in texto.lines() {
-        let mut campos = linea.split_whitespace();
+        // El proceso va al final como `users:((...))` y su nombre puede llevar
+        // espacios, así que se separa por su marca y no como un campo más por
+        // espacios: las seis columnas de la tabla, de ancho variable, quedan antes.
+        let (columnas, proceso_campo) = match linea.split_once("users:(") {
+            Some((cols, resto)) => (cols, Some(resto)),
+            None => (linea, None),
+        };
+        let mut campos = columnas.split_whitespace();
         let (Some(protocolo), Some(_estado), Some(_rq), Some(_sq), Some(local)) = (
             campos.next(),
             campos.next(),
@@ -41,8 +49,6 @@ pub fn puertos_de(texto: &str) -> Vec<Puerto> {
         ) else {
             continue;
         };
-        let _remota = campos.next();
-        let proceso_campo = campos.next();
 
         let Some((direccion, puerto)) = separar_puerto(local) else {
             continue;
@@ -120,6 +126,23 @@ mod tests {
                 puerto: 40571,
                 proceso: Some("claude".into()),
                 pid: Some(8592),
+            }]
+        );
+    }
+
+    #[test]
+    fn un_nombre_de_proceso_con_espacios_se_lee_completo() {
+        let lista = puertos_de(
+            "tcp LISTEN 0 512 127.0.0.1:631 0.0.0.0:* users:((\"my server\",pid=123,fd=4))",
+        );
+        assert_eq!(
+            lista,
+            vec![Puerto {
+                protocolo: "tcp".into(),
+                direccion: "127.0.0.1".into(),
+                puerto: 631,
+                proceso: Some("my server".into()),
+                pid: Some(123),
             }]
         );
     }
