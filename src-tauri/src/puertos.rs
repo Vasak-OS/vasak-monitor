@@ -106,6 +106,31 @@ pub fn ordenar(mut lista: Vec<Puerto>) -> Vec<Puerto> {
     lista
 }
 
+/// Los puertos a la escucha, con el proceso que los ocupa cuando `ss` lo ve.
+///
+/// Vive acá, junto a su parser, y no en `comandos.rs`: es glue fino sobre `ss` y
+/// todo lo que tiene lógica (y prueba) está en este módulo.
+///
+/// Devuelve `Err` si `ss` no arranca o termina con error, para que la pantalla
+/// distinga «no se pudo averiguar» de «no hay puertos»: una lista vacía queda
+/// reservada a una lectura que salió bien y no encontró ninguno.
+#[tauri::command]
+pub fn puertos_en_uso() -> Result<Vec<Puerto>, String> {
+    let salida = std::process::Command::new("ss")
+        .args(["-H", "-tulpn"])
+        .output()
+        .map_err(|e| format!("no se pudo ejecutar ss: {e}"))?;
+    if !salida.status.success() {
+        return Err(format!(
+            "ss terminó con error: {}",
+            String::from_utf8_lossy(&salida.stderr).trim()
+        ));
+    }
+    Ok(ordenar(puertos_de(&String::from_utf8_lossy(
+        &salida.stdout,
+    ))))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

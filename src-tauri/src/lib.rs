@@ -43,7 +43,7 @@ pub fn run() {
             comandos::cerrar,
             comandos::lista_de_servicios,
             comandos::accion_de_servicio,
-            comandos::puertos_en_uso,
+            puertos::puertos_en_uso,
             comandos::recuperable,
             comandos::limpiar,
             comandos::limpiar_todo,
