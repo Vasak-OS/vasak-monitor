@@ -7,7 +7,7 @@
  * `@vasakgroup/vue-libvasak`, que es la misma que usan las demás ventanas del
  * escritorio.
  *
- * Lo que se comprueba acá es lo del monitor —que las cinco pantallas estén y
+ * Lo que se comprueba acá es lo del monitor —que las seis pantallas estén y
  * cambien, y que el intervalo siga a mano—; cómo se pliega y cómo se ve es de
  * la librería y se prueba allá.
  */
@@ -19,10 +19,10 @@ import { nextTick } from 'vue';
 import App from '@/App.vue';
 import { olvidarTodo } from './dobles';
 
-const SCREENS = ['recursos', 'aplicaciones', 'servicios', 'limpieza', 'registros'];
+const SCREENS = ['recursos', 'aplicaciones', 'servicios', 'puertos', 'limpieza', 'registros'];
 
 /** Las vistas se reemplazan: lo que se mira es a cuál se llega, no qué dibuja. */
-const VIEWS = ['ResourcesView', 'AppsView', 'ServicesView', 'CleanupView', 'LogsView'];
+const VIEWS = ['ResourcesView', 'AppsView', 'ServicesView', 'PuertosView', 'CleanupView', 'LogsView'];
 
 async function openMonitor() {
 	const wrapper = mount(App, {
@@ -75,7 +75,7 @@ describe('la barra', () => {
 		expect(sidebar.find('button[aria-label="barraLateral.plegar"]').exists()).toBe(true);
 	});
 
-	test('están las cinco pantallas', async () => {
+	test('están las seis pantallas', async () => {
 		const wrapper = await openMonitor();
 
 		const texts = wrapper.findAllComponents(SideButton).map((button) => button.text());
@@ -116,7 +116,7 @@ describe('cambiar de pantalla', () => {
 		expect(buttonFor(wrapper, 'recursos')?.get('button').attributes('aria-current')).toBeUndefined();
 	});
 
-	test('las cinco llevan a algún lado', async () => {
+	test('las seis llevan a algún lado', async () => {
 		// El control de los de arriba: si una quedara sin vista, la ventana se
 		// vacía al apretarla y nadie lo dice.
 		const wrapper = await openMonitor();
@@ -202,7 +202,7 @@ describe('la ventana angosta: una columna por vez', () => {
 		expect(narrowList(wrapper).classes()).toContain('@[30rem]/window:hidden');
 	});
 
-	test('arranca en la lista, con las cinco pantallas y el intervalo', async () => {
+	test('arranca en la lista, con las seis pantallas y el intervalo', async () => {
 		// El intervalo no puede desaparecer por achicar la ventana: en la barra
 		// está al pie, y acá va debajo de la lista.
 		const wrapper = await openMonitor();

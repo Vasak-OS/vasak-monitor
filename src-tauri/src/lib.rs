@@ -9,6 +9,7 @@ pub mod limpieza;
 mod locales;
 pub mod muestreo;
 pub mod proyectos;
+pub mod puertos;
 pub mod registros;
 pub mod servicios;
 
@@ -42,6 +43,7 @@ pub fn run() {
             comandos::cerrar,
             comandos::lista_de_servicios,
             comandos::accion_de_servicio,
+            puertos::puertos_en_uso,
             comandos::recuperable,
             comandos::limpiar,
             comandos::limpiar_todo,

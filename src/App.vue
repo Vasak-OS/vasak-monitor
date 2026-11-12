@@ -20,6 +20,7 @@ import { saveTheme } from '@/tools/theme-cache';
 import AppsView from '@/views/AppsView.vue';
 import CleanupView from '@/views/CleanupView.vue';
 import LogsView from '@/views/LogsView.vue';
+import PuertosView from '@/views/PuertosView.vue';
 import ResourcesView from '@/views/ResourcesView.vue';
 import ServicesView from '@/views/ServicesView.vue';
 
@@ -27,7 +28,14 @@ const { t } = useI18n();
 const configStore = useConfigStore() as any;
 
 /** Los identificadores son también las claves del catálogo (`pantallas.*`). */
-const SCREENS = ['recursos', 'aplicaciones', 'servicios', 'limpieza', 'registros'] as const;
+const SCREENS = [
+	'recursos',
+	'aplicaciones',
+	'servicios',
+	'puertos',
+	'limpieza',
+	'registros',
+] as const;
 type Screen = (typeof SCREENS)[number];
 
 const screen = ref<Screen>('recursos');
@@ -53,6 +61,7 @@ const ICONS: Record<Screen, string> = {
 	recursos: 'utilities-system-monitor',
 	aplicaciones: 'applications-other',
 	servicios: 'system-run',
+	puertos: 'network-wired',
 	limpieza: 'user-trash',
 	registros: 'text-x-generic',
 };
@@ -200,6 +209,7 @@ onUnmounted(() => stopConfigListener?.());
 					:active="esEnVivo(screen)"
 				/>
 				<ServicesView v-else-if="screen === 'servicios'" />
+				<PuertosView v-else-if="screen === 'puertos'" />
 				<CleanupView v-else-if="screen === 'limpieza'" />
 				<LogsView v-else-if="screen === 'registros'" />
 			</main>
